@@ -1,0 +1,275 @@
+<main class="feature-page px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+  <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+    <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+      <div class="max-w-2xl">
+        <div class="flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
+          <svg [lucideIcon]="feature.icon" class="size-4"></svg>
+          {{ feature.eyebrow }}
+        </div>
+        <h2 class="mt-3 text-2xl font-semibold sm:text-3xl">{{ feature.title }}</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">{{ feature.description }}</p>
+      </div>
+
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+          (click)="secondaryAction.emit()"
+        >
+          <svg lucideIcon="download" class="size-4"></svg>
+          {{ feature.secondaryAction }}
+        </button>
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+          [disabled]="isBusy || fields.length === 0"
+          (click)="openCreateModal()"
+        >
+          <svg lucideIcon="plus" class="size-4"></svg>
+          {{ feature.primaryAction }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-4 grid gap-3 md:grid-cols-3" aria-label="Feature metrics">
+    @for (stat of feature.stats; track stat.label) {
+      <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/80">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ stat.label }}</p>
+            <p class="mt-2 text-2xl font-semibold">{{ stat.value }}</p>
+          </div>
+          <div class="rounded-lg p-2 ring-1" [ngClass]="tonePanelClass(stat.tone)">
+            <svg [lucideIcon]="stat.icon" class="size-5"></svg>
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">{{ stat.detail }}</p>
+      </article>
+    }
+  </section>
+
+  <section class="mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Workspace</p>
+        <h2 class="mt-1 text-xl font-semibold">Recent records</h2>
+      </div>
+      <button
+        type="button"
+        class="flex size-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+        aria-label="More actions"
+        (click)="secondaryAction.emit()"
+      >
+        <svg lucideIcon="more-horizontal" class="size-4"></svg>
+      </button>
+    </div>
+
+    @if (errorMessage) {
+      <div class="mt-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100" role="alert">
+        <div class="flex items-start gap-3">
+          <svg lucideIcon="alert-circle" class="mt-0.5 size-4 shrink-0"></svg>
+          <div>
+            <p class="font-semibold">Action needed</p>
+            <p class="mt-1 leading-5">{{ errorMessage }}</p>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (isBusy && !hasRows) {
+      <div class="mt-5 grid gap-3">
+        @for (item of [1, 2, 3]; track item) {
+          <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <div class="skeleton h-4 w-40 rounded"></div>
+            <div class="skeleton mt-3 h-3 w-64 rounded"></div>
+          </div>
+        }
+      </div>
+    } @else if (hasRows) {
+      <div class="mt-5 grid gap-3">
+      @for (row of rows; track row.id ?? row.title) {
+        <div class="rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="min-w-0">
+              <p class="font-semibold">{{ row.title }}</p>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ row.meta }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-3 md:justify-end">
+              <span class="rounded-full px-2 py-1 text-xs font-semibold ring-1" [ngClass]="badgeClass(row.status)">
+                {{ row.status }}
+              </span>
+              <span class="max-w-xs text-right text-sm font-semibold text-slate-800 dark:text-slate-100">{{ row.amount }}</span>
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"
+                  aria-label="Edit record"
+                  (click)="openEditModal(row)"
+                >
+                  <svg lucideIcon="pencil" class="size-4"></svg>
+                </button>
+                <button
+                  type="button"
+                  class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-400/10 dark:hover:text-rose-200"
+                  aria-label="Delete record"
+                  (click)="confirmDelete(row)"
+                >
+                  <svg lucideIcon="trash-2" class="size-4"></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+      </div>
+    } @else {
+      <div class="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-950">
+        <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+          <svg [lucideIcon]="feature.icon" class="size-6"></svg>
+        </div>
+        <p class="mt-4 text-sm font-semibold">{{ feature.emptyTitle ?? 'No records yet' }}</p>
+        <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
+          {{ feature.emptyDescription ?? 'Add your first record to start calculating live dashboard values.' }}
+        </p>
+        <button
+          type="button"
+          class="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+          [disabled]="isBusy || fields.length === 0"
+          (click)="openCreateModal()"
+        >
+          <svg lucideIcon="plus" class="size-4"></svg>
+          {{ feature.primaryAction }}
+        </button>
+      </div>
+    }
+  </section>
+</main>
+
+@if (isModalOpen) {
+  <div
+    class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:items-center"
+    (click)="onBackdropClick($event)"
+  >
+    <section
+      class="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="feature-modal-title"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ feature.eyebrow }}</p>
+          <h2 id="feature-modal-title" class="mt-1 text-xl font-semibold">
+            {{ editingRow ? 'Edit record' : (feature.formTitle ?? feature.primaryAction) }}
+          </h2>
+        </div>
+        <button
+          type="button"
+          class="flex size-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+          aria-label="Close modal"
+          (click)="closeModal()"
+        >
+          <svg lucideIcon="x" class="size-4"></svg>
+        </button>
+      </div>
+
+      <form class="mt-5 grid max-h-[70vh] gap-4 overflow-y-auto pr-1" [formGroup]="form" (ngSubmit)="submitForm()">
+        <div class="grid gap-4 sm:grid-cols-2">
+          @for (field of fields; track field.name) {
+            <div class="grid gap-2 text-sm font-medium" [ngClass]="{ 'sm:col-span-2': field.type === 'textarea' || field.type === 'checkbox' || isCategoryField(field) }">
+              <label [attr.for]="field.name" class="flex items-center justify-between gap-2">
+                <span>{{ field.label }}</span>
+                @if (!isRequired(field)) {
+                  <span class="text-xs font-medium text-slate-400 dark:text-slate-500">Optional</span>
+                }
+              </label>
+
+              @if (field.type === 'select') {
+                @if (isCategoryField(field)) {
+                  <div class="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950 sm:grid-cols-2" role="radiogroup" [attr.aria-label]="field.label">
+                    @for (option of field.options ?? []; track option) {
+                      <button
+                        type="button"
+                        class="flex min-h-11 items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm font-semibold transition"
+                        [ngClass]="categoryOptionClass(field, option)"
+                        [attr.aria-pressed]="isSelectedOption(field, option)"
+                        (click)="selectOption(field, option)"
+                      >
+                        <span class="flex min-w-0 items-center gap-2">
+                          <svg [lucideIcon]="categoryOptionIcon(option)" class="size-4 shrink-0"></svg>
+                          <span class="truncate">{{ option }}</span>
+                        </span>
+                        @if (isSelectedOption(field, option)) {
+                          <svg lucideIcon="check-circle-2" class="size-4 shrink-0"></svg>
+                        }
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <select
+                    [id]="field.name"
+                    [formControlName]="field.name"
+                    class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    @for (option of field.options ?? []; track option) {
+                      <option [value]="option">{{ option }}</option>
+                    }
+                  </select>
+                }
+              } @else if (field.type === 'textarea') {
+                <textarea
+                  [id]="field.name"
+                  [formControlName]="field.name"
+                  [rows]="field.rows ?? 3"
+                  class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900"
+                  [placeholder]="field.placeholder ?? ''"
+                ></textarea>
+              } @else if (field.type === 'checkbox') {
+                <span class="flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+                  <input [id]="field.name" [formControlName]="field.name" type="checkbox" class="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                  <span class="text-slate-600 dark:text-slate-300">{{ field.placeholder ?? 'Enabled' }}</span>
+                </span>
+              } @else {
+                <input
+                  [id]="field.name"
+                  [formControlName]="field.name"
+                  [type]="field.type"
+                  [readOnly]="field.readonly ?? false"
+                  class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition read-only:bg-slate-50 read-only:text-slate-500 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900 dark:read-only:bg-slate-950 dark:read-only:text-slate-400"
+                  [placeholder]="field.placeholder ?? ''"
+                >
+              }
+
+              @if (isInvalid(field)) {
+                <span class="text-xs font-medium text-rose-600 dark:text-rose-300">{{ field.label }} is required.</span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+            (click)="closeModal()"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+            [disabled]="isBusy"
+          >
+            @if (isBusy) {
+              <svg lucideIcon="loader-circle" class="size-4 animate-spin"></svg>
+            } @else {
+              <svg lucideIcon="save" class="size-4"></svg>
+            }
+            {{ editingRow ? 'Save Changes' : 'Create Record' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

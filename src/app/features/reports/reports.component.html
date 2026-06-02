@@ -1,0 +1,181 @@
+<main class="px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+  <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+      <div class="max-w-3xl">
+        <div class="flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
+          <svg lucideIcon="bar-chart-3" class="size-4"></svg>
+          Reports & Insights
+        </div>
+        <h2 class="mt-3 text-2xl font-semibold sm:text-3xl">Founder finance report</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+          A plain-English view of cash usage, spend concentration, monthly outflow, and runway readiness from your Firestore ledger.
+        </p>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 xl:min-w-[34rem]">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+          <p class="text-xs text-slate-500 dark:text-slate-400">Runway</p>
+          <p class="mt-1 text-2xl font-semibold">{{ summary().estimatedRunway }} months</p>
+          <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ runwayExplanation() }}</p>
+        </div>
+        <div class="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+          <div class="flex items-start gap-3">
+            <svg lucideIcon="lightbulb" class="mt-0.5 size-4 shrink-0"></svg>
+            <p class="text-sm font-semibold leading-6">{{ reportFinding() }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-4 grid gap-3 md:grid-cols-4" aria-label="Report metrics">
+    <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Funding Utilization</p>
+      <p class="mt-2 text-2xl font-semibold">{{ summary().utilizationPercentage }}%</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Paid spend versus funding received</p>
+    </article>
+    <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Paid</p>
+      <p class="mt-2 text-2xl font-semibold">{{ currencyINR(summary().totalPaid) }}</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Cleared spend</p>
+    </article>
+    <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Pending</p>
+      <p class="mt-2 text-2xl font-semibold">{{ currencyINR(summary().totalPending) }}</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Open commitments</p>
+    </article>
+    <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Monthly Burn</p>
+      <p class="mt-2 text-2xl font-semibold">{{ currencyINR(summary().monthlyBurn) }}</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Paid salaries + active recurring costs</p>
+    </article>
+  </section>
+
+  <section class="mt-4 grid gap-4 xl:grid-cols-[0.78fr_1.22fr]">
+    <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <div>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Capital Usage</p>
+        <h2 class="mt-1 text-xl font-semibold">Funding used vs available</h2>
+      </div>
+
+      <div class="mt-6 flex flex-col items-center gap-5 sm:flex-row xl:flex-col 2xl:flex-row">
+        <div class="relative size-44 shrink-0 rounded-full p-4" [style.background]="allocationGradient()">
+          <div class="flex h-full w-full flex-col items-center justify-center rounded-full bg-white text-center shadow-inner dark:bg-slate-900">
+            <p class="text-3xl font-semibold">{{ summary().utilizationPercentage }}%</p>
+            <p class="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">utilized</p>
+          </div>
+        </div>
+
+        <div class="grid flex-1 gap-3 text-sm">
+          <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
+            <span class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <span class="size-2 rounded-full bg-teal-400"></span>
+              Paid spend
+            </span>
+            <span class="font-semibold">{{ currencyINR(summary().totalPaid) }}</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
+            <span class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <span class="size-2 rounded-full bg-slate-700"></span>
+              Available cash
+            </span>
+            <span class="font-semibold">{{ currencyINR(summary().remainingBalance) }}</span>
+          </div>
+          <div class="rounded-lg border border-slate-200 px-3 py-2 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            Funding utilization only uses paid spend. Pending commitments stay visible separately so you can review cash still at risk.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <app-spend-trend-chart
+      [points]="summary().monthlySpendTrend"
+      title="Monthly spend trend"
+      description="This line shows actual cash outflow by month across expenses, startup costs, salaries, and recurring costs. Peaks reveal when spend accelerated."
+    />
+  </section>
+
+  <section class="mt-4 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+    <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Category-wise Spending</p>
+          <h2 class="mt-1 text-xl font-semibold">Spend concentration</h2>
+        </div>
+        @if (topCategory()) {
+          <span class="inline-flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-100 dark:bg-amber-400/10 dark:text-amber-100 dark:ring-amber-400/20">
+            <svg lucideIcon="target" class="size-3.5"></svg>
+            Top category {{ topCategoryShare() }}%
+          </span>
+        }
+      </div>
+
+      <p class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">{{ concentrationExplanation() }}</p>
+
+      @if (summary().categorySpends.length) {
+        <div class="mt-5 space-y-4">
+          @for (category of summary().categorySpends; track category.label) {
+            <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-3">
+                  <div class="rounded-lg p-2 ring-1" [ngClass]="tonePanelClass(category.tone)">
+                    <svg [lucideIcon]="category.icon" class="size-4"></svg>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold">{{ category.label }}</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {{ summary().totalExpenses > 0 ? ((category.amount / summary().totalExpenses) * 100 | number: '1.0-0') : 0 }}% of tracked spend
+                    </p>
+                  </div>
+                </div>
+                <p class="text-right text-sm font-semibold">{{ currencyINR(category.amount) }}</p>
+              </div>
+              <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" aria-hidden="true">
+                <div class="h-full rounded-full transition-all duration-700" [ngClass]="progressClass(category.tone)" [style.width.%]="summary().totalExpenses > 0 ? (category.amount / summary().totalExpenses) * 100 : 0"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+          Add expenses or costs to generate category reports.
+        </div>
+      }
+    </article>
+
+    <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <div>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Spend Sources</p>
+        <h2 class="mt-1 text-xl font-semibold">What is driving spend</h2>
+      </div>
+
+      @if (summary().spendSources.length) {
+        <div class="mt-5 space-y-3">
+          @for (source of summary().spendSources; track source.label) {
+            <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="rounded-lg p-2 ring-1" [ngClass]="tonePanelClass(source.tone)">
+                    <svg [lucideIcon]="source.icon" class="size-4"></svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold">{{ source.label }}</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ source.detail }}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-semibold">{{ currencyINR(source.amount) }}</p>
+                  <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ sourceShare(source) }}%</p>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+          Add records to see whether spend is coming from expenses, startup setup, salaries, or recurring costs.
+        </div>
+      }
+    </article>
+  </section>
+</main>

@@ -1,0 +1,83 @@
+<section [ngClass]="shellClass">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Trend Analysis</p>
+      <h2 class="mt-1 text-xl font-semibold">{{ title }}</h2>
+      <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">{{ description }}</p>
+    </div>
+
+    @if (hasData) {
+      <div class="grid grid-cols-3 gap-2 text-right text-xs" [ngClass]="{ 'sm:min-w-80': !compact }">
+        <div class="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
+          <p class="text-slate-500 dark:text-slate-400">Total</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{{ currencyINR(total) }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
+          <p class="text-slate-500 dark:text-slate-400">Peak</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{{ peak.month }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
+          <p class="text-slate-500 dark:text-slate-400">Avg active</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{{ currencyINR(average) }}</p>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (hasData) {
+    <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+      <svg class="w-full overflow-visible" [ngClass]="compact ? 'h-56' : 'h-72'" [attr.viewBox]="viewBox" role="img" [attr.aria-label]="title">
+        <defs>
+          <linearGradient id="spendTrendArea" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.34" />
+            <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        @for (label of yAxisLabels; track $index) {
+          <line x1="76" x2="616" [attr.y1]="yAxisY($index)" [attr.y2]="yAxisY($index)" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="1" />
+          <text x="0" [attr.y]="yAxisY($index) + 4" class="fill-slate-500 text-[11px] dark:fill-slate-400">
+            {{ currencyINR(label) }}
+          </text>
+        }
+
+        <path [attr.d]="areaPath" fill="url(#spendTrendArea)"></path>
+        <path [attr.d]="linePath" fill="none" class="stroke-teal-400" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+
+        @for (point of chartPoints; track point.month) {
+          @if (point.amount > 0) {
+            <circle [attr.cx]="point.x" [attr.cy]="point.y" r="6" class="fill-slate-950 stroke-teal-300 dark:fill-slate-950" stroke-width="3">
+              <title>{{ pointTitle(point) }}</title>
+            </circle>
+            <text [attr.x]="point.x" [attr.y]="point.y - 14" text-anchor="middle" class="fill-slate-700 text-[11px] font-semibold dark:fill-slate-200">
+              {{ currencyINR(point.amount) }}
+            </text>
+          }
+        }
+
+        @for (point of monthLabels; track point.month) {
+          <text [attr.x]="point.x" y="260" text-anchor="middle" class="fill-slate-500 text-[11px] dark:fill-slate-400">
+            {{ point.month }}
+          </text>
+        }
+      </svg>
+    </div>
+
+    <div class="mt-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+      <div class="flex items-start gap-3">
+        <svg lucideIcon="lightbulb" class="mt-0.5 size-4 shrink-0"></svg>
+        <p class="leading-6">{{ takeaway }}</p>
+      </div>
+    </div>
+  } @else {
+    <div class="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-950">
+      <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+        <svg lucideIcon="line-chart" class="size-6"></svg>
+      </div>
+      <p class="mt-4 text-sm font-semibold">No monthly spend trend yet</p>
+      <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
+        Add dated expenses, startup costs, salaries, or recurring costs. The report will show monthly outflow with labels and founder takeaways.
+      </p>
+    </div>
+  }
+</section>

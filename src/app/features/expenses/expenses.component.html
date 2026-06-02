@@ -1,0 +1,9 @@
+<app-feature-page
+  [feature]="feature"
+  [rows]="rows"
+  [isBusy]="isBusy"
+  [errorMessage]="errorMessage"
+  (saveRecord)="save($event)"
+  (deleteRecord)="delete($event)"
+  (secondaryAction)="acknowledgeRealtime()"
+/>
