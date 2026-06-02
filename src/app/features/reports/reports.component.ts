@@ -80,7 +80,7 @@ export class ReportsComponent {
     }
 
     if (summary.monthlyBurn <= 0) {
-      return `${this.currencyINR(summary.totalPaid)} has been paid, but monthly burn is still not calculable because no paid salaries or active recurring costs are recorded.`;
+      return `${this.currencyINR(summary.totalPaid)} has been paid, but monthly burn is still not calculable because no monthly or dated spend is recorded.`;
     }
 
     if (summary.estimatedRunway < 6) {
@@ -94,14 +94,18 @@ export class ReportsComponent {
     return `Runway is ${summary.estimatedRunway} months and funding utilization is ${summary.utilizationPercentage}%. Spend is distributed across ${summary.categorySpends.length} categories.`;
   }
 
+  runwayLabel(): string {
+    return this.summary().runwayLabel;
+  }
+
   runwayExplanation(): string {
     const summary = this.summary();
 
     if (summary.monthlyBurn <= 0) {
-      return 'Runway needs recurring burn. Add paid salaries or recurring costs to calculate how many months the current cash can support.';
+      return 'Runway needs burn data. Add paid salaries, recurring costs, or dated spend records to calculate how many months current cash can support.';
     }
 
-    return `Runway is calculated as available cash ${this.currencyINR(summary.remainingBalance)} divided by monthly burn ${this.currencyINR(summary.monthlyBurn)}.`;
+    return `${summary.runwayExplanation}: available cash ${this.currencyINR(summary.remainingBalance)} divided by monthly burn ${this.currencyINR(summary.monthlyBurn)}.`;
   }
 
   concentrationExplanation(): string {

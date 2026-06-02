@@ -8,10 +8,10 @@
             Founder runway command center
           </div>
           <h2 id="runway-heading" class="mt-3 text-2xl font-semibold sm:text-3xl">
-            At current spending rate you have approximately {{ summary().estimatedRunway }} months of runway remaining.
+            {{ runwayHeading() }}
           </h2>
           <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Available cash is {{ currencyINR(summary().remainingBalance) }} against a monthly burn of {{ currencyINR(summary().monthlyBurn) }}.
+            {{ runwaySubcopy() }}
           </p>
         </div>
 
@@ -19,7 +19,7 @@
           <svg lucideIcon="clock-3" class="size-5 text-teal-600 dark:text-teal-300"></svg>
           <div>
             <p class="text-xs text-slate-500 dark:text-slate-400">Runway</p>
-            <p class="text-xl font-semibold">{{ summary().estimatedRunway }} months</p>
+            <p class="text-xl font-semibold">{{ summary().runwayLabel }}</p>
           </div>
         </div>
       </div>
@@ -30,7 +30,7 @@
           <span>12 month target</span>
         </div>
         <div class="h-3 overflow-hidden rounded-full bg-slate-100 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-          <div class="h-full rounded-full bg-teal-500 transition-all duration-700 dark:bg-teal-300" [style.width.%]="percentage(summary().estimatedRunway, 12)"></div>
+          <div class="h-full rounded-full bg-teal-500 transition-all duration-700 dark:bg-teal-300" [style.width.%]="summary().runwayProgress"></div>
         </div>
       </div>
     </article>

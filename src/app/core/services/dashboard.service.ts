@@ -34,7 +34,12 @@ export const emptyDashboardSummary: DashboardSummary = {
   totalPending: 0,
   remainingBalance: 0,
   monthlyBurn: 0,
+  monthlyBurnDetail: 'Add paid salaries, recurring costs, or dated spend records.',
   estimatedRunway: 0,
+  canCalculateRunway: false,
+  runwayLabel: 'Not calculated',
+  runwayExplanation: 'Add paid salaries, active recurring costs, or dated spend records to calculate runway.',
+  runwayProgress: 0,
   utilizationPercentage: 0,
   activeTeamMembers: 0,
   pendingPaymentsCount: 0,
@@ -98,9 +103,25 @@ export class DashboardService {
     const pendingStartup = sum(startupCosts.map((item) => pendingAmount(item.paymentStatus, item.amount, item.pendingAmount)));
     const totalPending = pendingExpense + pendingTeam + pendingStartup;
     const remainingBalance = Math.max(totalFunding - totalPaid, 0);
+    const monthlySpendTrend = this.monthlySpendTrend(expenses, startupCosts, teamPayments, recurringCosts);
     const monthlyRecurring = sum(recurringCosts.filter((item) => item.isActive).map((item) => monthlyEquivalent(item.amount, item.billingCycle)));
-    const monthlyBurn = monthlyRecurring + totalTeamPayments;
-    const estimatedRunway = monthlyBurn > 0 ? roundOne(remainingBalance / monthlyBurn) : 0;
+    const scheduledMonthlyBurn = monthlyRecurring + totalTeamPayments;
+    const observedMonthlyBurn = averageActiveMonthSpend(monthlySpendTrend);
+    const monthlyBurn = scheduledMonthlyBurn > 0 ? scheduledMonthlyBurn : observedMonthlyBurn;
+    const monthlyBurnDetail = scheduledMonthlyBurn > 0
+      ? 'Active recurring + team commitments'
+      : monthlyBurn > 0
+        ? 'Estimated from average active-month ledger spend'
+        : 'Add paid salaries, recurring costs, or dated spend records';
+    const canCalculateRunway = monthlyBurn > 0;
+    const estimatedRunway = canCalculateRunway ? roundOne(remainingBalance / monthlyBurn) : 0;
+    const runwayLabel = canCalculateRunway ? `${estimatedRunway} months` : 'Not calculated';
+    const runwayExplanation = canCalculateRunway
+      ? scheduledMonthlyBurn > 0
+        ? 'Based on active recurring and team commitments'
+        : 'Estimated from average active-month ledger spend'
+      : 'Add paid salaries, active recurring costs, or dated spend records to calculate runway.';
+    const runwayProgress = canCalculateRunway ? Math.min(Math.round((estimatedRunway / 12) * 100), 100) : 0;
     const utilizationPercentage = totalFunding > 0 ? Math.min(roundOne((totalPaid / totalFunding) * 100), 100) : 0;
     const activeTeamMembers = new Set(teamPayments.map((item) => item.personName.trim()).filter(Boolean)).size;
     const pendingPaymentsCount = [
@@ -115,7 +136,6 @@ export class DashboardService {
     const insightBars = this.insightBars(categorySpends, totalExpenses);
     const ledgerPayments = this.ledgerPayments(expenses, teamPayments, startupCosts, recurringCosts);
     const decisionNotes = this.decisionNotes(notes);
-    const monthlySpendTrend = this.monthlySpendTrend(expenses, startupCosts, teamPayments, recurringCosts);
     const burnTrend = this.normalizedTrend(monthlySpendTrend);
 
     return {
@@ -125,7 +145,12 @@ export class DashboardService {
       totalPending,
       remainingBalance,
       monthlyBurn,
+      monthlyBurnDetail,
       estimatedRunway,
+      canCalculateRunway,
+      runwayLabel,
+      runwayExplanation,
+      runwayProgress,
       utilizationPercentage,
       activeTeamMembers,
       pendingPaymentsCount,
@@ -133,8 +158,10 @@ export class DashboardService {
       upcomingExpensesCount: upcomingExpenses.length,
       founderMetrics: this.founderMetrics({
         activeTeamMembers,
+        canCalculateRunway,
         estimatedRunway,
         monthlyBurn,
+        monthlyBurnDetail,
         remainingBalance,
         totalFunding,
         totalPaid,
@@ -157,8 +184,10 @@ export class DashboardService {
 
   private founderMetrics(summary: {
     activeTeamMembers: number;
+    canCalculateRunway: boolean;
     estimatedRunway: number;
     monthlyBurn: number;
+    monthlyBurnDetail: string;
     remainingBalance: number;
     totalFunding: number;
     totalPaid: number;
@@ -167,7 +196,7 @@ export class DashboardService {
     upcomingExpensesCount: number;
     utilizationPercentage: number;
   }): FounderMetric[] {
-    const runwayProgress = Math.min(Math.round((summary.estimatedRunway / 12) * 100), 100);
+    const runwayProgress = summary.canCalculateRunway ? Math.min(Math.round((summary.estimatedRunway / 12) * 100), 100) : 0;
 
     return [
       {
@@ -197,15 +226,15 @@ export class DashboardService {
       {
         label: 'Monthly Burn Rate',
         value: currencyINR(summary.monthlyBurn),
-        detail: 'Active recurring + team commitments',
+        detail: summary.monthlyBurnDetail,
         icon: 'repeat-2',
         tone: 'rose',
         progress: summary.totalFunding > 0 ? Math.min(Math.round((summary.monthlyBurn / summary.totalFunding) * 100), 100) : 0,
       },
       {
         label: 'Runway Remaining',
-        value: `${summary.estimatedRunway} months`,
-        detail: summary.monthlyBurn > 0 ? 'At the current spending rate' : 'Add recurring or team costs to calculate',
+        value: summary.canCalculateRunway ? `${summary.estimatedRunway} months` : 'Not calculated',
+        detail: summary.canCalculateRunway ? 'At the current spending rate' : 'Add monthly or dated spend records',
         icon: 'clock-3',
         tone: 'sky',
         progress: runwayProgress,
@@ -472,6 +501,11 @@ function monthlyEquivalent(amount: number, billingCycle: string): number {
 
 function roundOne(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function averageActiveMonthSpend(points: MonthlyTrendPoint[]): number {
+  const activeMonths = points.map((point) => point.amount).filter((amount) => amount > 0);
+  return activeMonths.length ? roundOne(sum(activeMonths) / activeMonths.length) : 0;
 }
 
 function addToMap(mapValue: Map<string, number>, key: string, amount: number): void {

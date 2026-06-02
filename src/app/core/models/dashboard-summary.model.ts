@@ -16,7 +16,12 @@ export interface DashboardSummary {
   totalPending: number;
   remainingBalance: number;
   monthlyBurn: number;
+  monthlyBurnDetail: string;
   estimatedRunway: number;
+  canCalculateRunway: boolean;
+  runwayLabel: string;
+  runwayExplanation: string;
+  runwayProgress: number;
   utilizationPercentage: number;
   activeTeamMembers: number;
   pendingPaymentsCount: number;

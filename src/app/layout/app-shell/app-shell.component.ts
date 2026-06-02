@@ -118,6 +118,14 @@ export class AppShellComponent implements OnInit, OnDestroy {
       .join('') || 'F';
   }
 
+  runwayLabel(): string {
+    return this.summary().runwayLabel;
+  }
+
+  runwayProgress(): number {
+    return this.summary().runwayProgress;
+  }
+
   showToast(message: string): void {
     this.toastMessage = message;
     this.clearTimer(this.toastTimer);

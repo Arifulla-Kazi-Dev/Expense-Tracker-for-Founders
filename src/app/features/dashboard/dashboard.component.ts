@@ -76,6 +76,17 @@ export class DashboardComponent implements OnDestroy {
 
     const alerts: DashboardAlert[] = [];
 
+    if (summary.remainingBalance > 0 && !summary.canCalculateRunway) {
+      alerts.push({
+        title: 'Runway needs monthly burn data',
+        detail: 'Cash is recorded, but no monthly or dated spend is available for runway calculation.',
+        icon: 'clock-3',
+        tone: 'sky',
+        actionLabel: 'Add recurring cost',
+        route: '/recurring-costs',
+      });
+    }
+
     if (summary.monthlyBurn > 0 && summary.estimatedRunway < 6) {
       alerts.push({
         title: 'Runway below the 6 month floor',
@@ -117,6 +128,30 @@ export class DashboardComponent implements OnDestroy {
 
   currencyINR(value: number): string {
     return currencyINR(value);
+  }
+
+  runwayHeading(): string {
+    const summary = this.summary();
+
+    if (!summary.hasData) {
+      return 'Add funding and monthly costs to calculate founder runway.';
+    }
+
+    if (!summary.canCalculateRunway) {
+      return 'Runway is not calculated yet because burn data is not recorded.';
+    }
+
+    return `At current spending rate you have approximately ${summary.runwayLabel} of runway remaining.`;
+  }
+
+  runwaySubcopy(): string {
+    const summary = this.summary();
+
+    if (!summary.canCalculateRunway) {
+      return `Available cash is ${currencyINR(summary.remainingBalance)}, but monthly burn has no source yet. Add paid salaries, active recurring costs, or dated spend records to calculate runway.`;
+    }
+
+    return `${summary.runwayExplanation}. Available cash is ${currencyINR(summary.remainingBalance)} against a monthly burn of ${currencyINR(summary.monthlyBurn)}.`;
   }
 
   setRange(range: string): void {
