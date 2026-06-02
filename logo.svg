@@ -1,0 +1,11 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Expense Tracker for Founders logo</title>
+  <desc id="desc">A founder finance mark with a ledger shield and runway trend line.</desc>
+  <rect width="128" height="128" rx="28" fill="#020617"/>
+  <rect x="12" y="12" width="104" height="104" rx="22" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
+  <path d="M64 26L92 38V60C92 78.5 80.2 94.5 64 101.5C47.8 94.5 36 78.5 36 60V38L64 26Z" fill="#111827" stroke="#5eead4" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M48 70L58 60L68 66L82 48" stroke="#facc15" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 84H82" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M47 45H68" stroke="#e2e8f0" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="84" cy="45" r="7" fill="#5eead4"/>
+</svg>

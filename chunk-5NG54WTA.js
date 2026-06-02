@@ -1,0 +1,1 @@
+var e=["Paid","Pending","Partially Paid"],t=["One-Time","Recurring"],n=["Legal & Compliance","Valuation","Company Registration","Product Development","AI Development Tools","Cloud / Hosting","Marketing","Branding","User Acquisition","Travel","Intern Stipends","Salaries","Office / Workspace","Internet / Utilities","Emergency Buffer","Miscellaneous"];export{e as a,t as b,n as c};
