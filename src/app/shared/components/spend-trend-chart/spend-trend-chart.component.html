@@ -10,15 +10,18 @@
       <div class="grid gap-2 text-xs" [ngClass]="compact ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:min-w-80 sm:grid-cols-3 sm:text-right'">
         <div class="min-w-0 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
           <p class="text-slate-500 dark:text-slate-400">Total</p>
-          <p class="mt-1 break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white">{{ currencyINR(total) }}</p>
+          <!-- lines 13, 17, 21 — change break-words to wrap-break-word -->
+          <p class="mt-1 wrap-break-word text-sm font-semibold leading-5 text-slate-900 dark:text-white">{{ currencyINR(total) }}</p>
         </div>
         <div class="min-w-0 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
           <p class="text-slate-500 dark:text-slate-400">Peak</p>
-          <p class="mt-1 break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white">{{ peak.month }}</p>
+          <!-- lines 13, 17, 21 — change break-words to wrap-break-word -->
+          <p class="mt-1 wrap-break-word text-sm font-semibold leading-5 text-slate-900 dark:text-white">{{ peak.month }}</p>
         </div>
         <div class="min-w-0 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800">
           <p class="text-slate-500 dark:text-slate-400">Avg active</p>
-          <p class="mt-1 break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white">{{ currencyINR(average) }}</p>
+          <!-- lines 13, 17, 21 — change break-words to wrap-break-word -->
+          <p class="mt-1 wrap-break-word text-sm font-semibold leading-5 text-slate-900 dark:text-white">{{ currencyINR(average) }}</p>
         </div>
       </div>
     }
