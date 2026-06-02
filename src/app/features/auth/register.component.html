@@ -1,4 +1,19 @@
 <main class="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 transition-colors dark:bg-slate-950 dark:text-slate-100">
+  <nav class="mx-auto mb-5 flex w-full max-w-6xl items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm md:hidden dark:border-slate-800 dark:bg-slate-900/80" aria-label="Authentication navigation">
+    <div class="flex items-center gap-2">
+      <div class="flex size-9 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+        <svg lucideIcon="badge-indian-rupee" class="size-4"></svg>
+      </div>
+      <span class="text-sm font-semibold">Founder finance OS</span>
+    </div>
+    <a
+      routerLink="/login"
+      class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+    >
+      Sign in
+    </a>
+  </nav>
+
   <section class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center justify-center">
     <div class="grid w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:grid-cols-[0.95fr_1.05fr] dark:border-slate-800 dark:bg-slate-900/80">
       <div class="hidden border-r border-slate-200 bg-slate-950 p-8 text-white md:flex md:flex-col md:justify-between dark:border-slate-800">
