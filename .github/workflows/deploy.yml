@@ -40,8 +40,27 @@ jobs:
 
       - name: Prepare static Pages shell
         run: |
-          cp dist/expense-tracker-founders/browser/index.csr.html dist/expense-tracker-founders/browser/index.html
-          cp dist/expense-tracker-founders/browser/index.html dist/expense-tracker-founders/browser/404.html
+          APP_DIR="dist/expense-tracker-founders/browser"
+          cp "$APP_DIR/index.csr.html" "$APP_DIR/index.html"
+          cp "$APP_DIR/index.html" "$APP_DIR/404.html"
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'dist/expense-tracker-founders/browser';
+          const cssFile = fs.readdirSync(path).find((file) => /^styles-.+\.css$/.test(file));
+
+          if (!cssFile) {
+            throw new Error('Unable to find compiled stylesheet for Pages publish.');
+          }
+
+          const css = fs.readFileSync(`${path}/${cssFile}`, 'utf8');
+          const cssLink = `<link rel="stylesheet" href="${cssFile}">`;
+
+          for (const file of ['index.html', '404.html']) {
+            const htmlPath = `${path}/${file}`;
+            const html = fs.readFileSync(htmlPath, 'utf8').replace(cssLink, `<style>${css}</style>`);
+            fs.writeFileSync(htmlPath, html);
+          }
+          NODE
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
