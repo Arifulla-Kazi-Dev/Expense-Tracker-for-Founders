@@ -5,7 +5,9 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { MonthlyTrendPoint } from '../../../core/models/dashboard.models';
 import { currencyINR } from '../../../core/utils/finance-formatters';
 
-interface ChartPoint extends MonthlyTrendPoint {
+interface ChartPoint {
+  month: string;
+  amount: number;
   x: number;
   y: number;
 }
