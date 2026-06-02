@@ -25,13 +25,13 @@ export class SpendTrendChartComponent {
   @Input() compact = false;
   @Input() framed = true;
 
-  readonly viewBox = '0 0 640 280';
+  readonly viewBox = '0 0 640 300';
   private readonly left = 76;
   private readonly right = 24;
   private readonly top = 24;
   private readonly bottom = 52;
   private readonly width = 640;
-  private readonly height = 280;
+  private readonly height = 300;
 
   get hasData(): boolean {
     return this.points.some((point) => point.amount > 0);
@@ -39,7 +39,7 @@ export class SpendTrendChartComponent {
 
   get shellClass(): string {
     return this.framed
-      ? 'rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80'
+      ? 'ui-panel rounded-lg p-5'
       : '';
   }
 
@@ -60,6 +60,29 @@ export class SpendTrendChartComponent {
       (peak, point) => point.amount > peak.amount ? point : peak,
       { month: 'No spend', amount: 0 },
     );
+  }
+
+  get latestActive(): MonthlyTrendPoint {
+    const active = this.points.filter((point) => point.amount > 0);
+    return active[active.length - 1] ?? { month: 'No spend', amount: 0 };
+  }
+
+  get trendSignal(): string {
+    const active = this.points.filter((point) => point.amount > 0);
+
+    if (active.length < 2) {
+      return active.length ? 'First spend month recorded' : 'Waiting for spend data';
+    }
+
+    const current = active[active.length - 1];
+    const previous = active[active.length - 2];
+    const delta = current.amount - previous.amount;
+
+    if (delta === 0) {
+      return 'Spend is flat versus the previous active month';
+    }
+
+    return `Spend ${delta > 0 ? 'increased' : 'decreased'} by ${this.currencyINR(Math.abs(delta))} versus ${previous.month}`;
   }
 
   get chartPoints(): ChartPoint[] {
@@ -109,6 +132,22 @@ export class SpendTrendChartComponent {
     }
 
     return points;
+  }
+
+  barX(point: ChartPoint): number {
+    return point.x - (this.compact ? 9 : 12);
+  }
+
+  barY(point: ChartPoint): number {
+    return point.y;
+  }
+
+  barWidth(): number {
+    return this.compact ? 18 : 24;
+  }
+
+  barHeight(point: ChartPoint): number {
+    return this.height - this.bottom - point.y;
   }
 
   get takeaway(): string {

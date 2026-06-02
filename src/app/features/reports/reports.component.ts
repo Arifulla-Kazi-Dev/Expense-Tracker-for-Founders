@@ -6,7 +6,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
-import { progressClass, tonePanelClass } from '../../core/utils/ui-classnames';
+import { progressClass, softTextClass, tonePanelClass } from '../../core/utils/ui-classnames';
 import { CategorySpend, SpendSource, Tone } from '../../core/models/dashboard.models';
 import { SpendTrendChartComponent } from '../../shared/components/spend-trend-chart/spend-trend-chart.component';
 
@@ -31,6 +31,10 @@ export class ReportsComponent {
 
   progressClass(tone: Tone): string {
     return progressClass(tone);
+  }
+
+  softTextClass(tone: Tone): string {
+    return softTextClass(tone);
   }
 
   hasBurnTrend(): boolean {
@@ -59,6 +63,11 @@ export class ReportsComponent {
   sourceShare(source: SpendSource): number {
     const totalExpenses = this.summary().totalExpenses;
     return totalExpenses > 0 ? Math.round((source.amount / totalExpenses) * 100) : 0;
+  }
+
+  categoryShare(category: CategorySpend): number {
+    const totalExpenses = this.summary().totalExpenses;
+    return totalExpenses > 0 ? Math.round((category.amount / totalExpenses) * 100) : 0;
   }
 
   availableCashShare(): number {
@@ -92,6 +101,93 @@ export class ReportsComponent {
     }
 
     return `Runway is ${summary.estimatedRunway} months and funding utilization is ${summary.utilizationPercentage}%. Spend is distributed across ${summary.categorySpends.length} categories.`;
+  }
+
+  reportScore(): number {
+    const summary = this.summary();
+
+    if (!summary.hasData) {
+      return 0;
+    }
+
+    let score = 88;
+
+    if (!summary.canCalculateRunway) {
+      score -= 24;
+    } else if (summary.estimatedRunway < 6) {
+      score -= 28;
+    } else if (summary.estimatedRunway < 12) {
+      score -= 12;
+    }
+
+    if (summary.utilizationPercentage > 80) {
+      score -= 16;
+    }
+
+    if (summary.totalPending > 0) {
+      score -= Math.min(14, summary.pendingPaymentsCount * 3);
+    }
+
+    if (this.topCategoryShare() > 50) {
+      score -= 8;
+    }
+
+    return Math.max(Math.min(score, 100), 0);
+  }
+
+  reportScoreToneClass(): string {
+    const score = this.reportScore();
+
+    if (score >= 78) {
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20';
+    }
+
+    if (score >= 55) {
+      return 'bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20';
+    }
+
+    return 'bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-400/20';
+  }
+
+  forecastQuarterBurn(): number {
+    return this.summary().monthlyBurn * 3;
+  }
+
+  pendingRiskShare(): number {
+    const total = this.summary().totalPaid + this.summary().totalPending;
+    return total > 0 ? Math.round((this.summary().totalPending / total) * 100) : 0;
+  }
+
+  runwayStatement(): string {
+    const summary = this.summary();
+
+    if (!summary.canCalculateRunway) {
+      return 'Runway is waiting for reliable monthly burn data.';
+    }
+
+    if (summary.estimatedRunway < 6) {
+      return 'Runway is below the founder safety floor.';
+    }
+
+    if (summary.estimatedRunway < 12) {
+      return 'Runway is workable, but below a 12 month operating target.';
+    }
+
+    return 'Runway is above the 12 month operating target.';
+  }
+
+  runwayProgress(): number {
+    return this.summary().runwayProgress;
+  }
+
+  paidFundingShare(): number {
+    const totalFunding = this.summary().totalFunding;
+    return totalFunding > 0 ? Math.min(Math.round((this.summary().totalPaid / totalFunding) * 100), 100) : 0;
+  }
+
+  remainingFundingShare(): number {
+    const totalFunding = this.summary().totalFunding;
+    return totalFunding > 0 ? Math.max(100 - this.paidFundingShare(), 0) : 0;
   }
 
   runwayLabel(): string {

@@ -1,4 +1,3 @@
-import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -6,13 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideDynamicIcon } from '@lucide/angular';
 
-import { Direction, PaymentStatus, Tone } from '../../core/models/dashboard.models';
+import { PaymentStatus, Tone } from '../../core/models/dashboard.models';
 import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import {
   badgeClass,
-  directionClass,
-  directionIcon,
   priorityClass,
   progressClass,
   softTextClass,
@@ -23,7 +20,7 @@ import { SpendTrendChartComponent } from '../../shared/components/spend-trend-ch
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [A11yModule, CommonModule, FormsModule, LucideDynamicIcon, RouterLink, SpendTrendChartComponent],
+  imports: [CommonModule, FormsModule, LucideDynamicIcon, RouterLink, SpendTrendChartComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -56,6 +53,42 @@ export class DashboardComponent implements OnDestroy {
         .toLowerCase()
         .includes(query),
     );
+  }
+
+  get topCategory() {
+    return this.summary().categorySpends[0] ?? null;
+  }
+
+  get keyMetrics() {
+    return this.summary().founderMetrics.slice(0, 8);
+  }
+
+  get reviewHighlights(): Array<{ label: string; value: string; detail: string; icon: string; tone: Tone }> {
+    const summary = this.summary();
+
+    return [
+      {
+        label: 'Cash reserve',
+        value: currencyINR(summary.remainingBalance),
+        detail: summary.totalFunding > 0 ? `${this.availableShare()}% of funding still available` : 'Add funding to calculate reserve',
+        icon: 'landmark',
+        tone: 'emerald',
+      },
+      {
+        label: 'Burn source',
+        value: summary.monthlyBurn > 0 ? currencyINR(summary.monthlyBurn) : 'Pending',
+        detail: summary.monthlyBurnDetail,
+        icon: 'circle-gauge',
+        tone: summary.monthlyBurn > 0 ? 'rose' : 'sky',
+      },
+      {
+        label: 'Largest category',
+        value: this.topCategory?.label ?? 'No spend',
+        detail: this.topCategory ? `${this.topCategoryShare()}% of tracked spend` : 'Add categories to unlock concentration',
+        icon: 'radar',
+        tone: this.topCategoryShare() > 45 ? 'amber' : 'teal',
+      },
+    ];
   }
 
   get dashboardAlerts(): DashboardAlert[] {
@@ -154,6 +187,244 @@ export class DashboardComponent implements OnDestroy {
     return `${summary.runwayExplanation}. Available cash is ${currencyINR(summary.remainingBalance)} against a monthly burn of ${currencyINR(summary.monthlyBurn)}.`;
   }
 
+  runwayTone(): string {
+    const summary = this.summary();
+
+    if (!summary.canCalculateRunway) {
+      return 'Needs burn data';
+    }
+
+    if (summary.estimatedRunway < 6) {
+      return 'Critical runway';
+    }
+
+    if (summary.estimatedRunway < 12) {
+      return 'Watch runway';
+    }
+
+    return 'Healthy runway';
+  }
+
+  runwayRiskCopy(): string {
+    const summary = this.summary();
+
+    if (!summary.hasData) {
+      return 'Connect the first funding and expense records to turn this into a live founder operating view.';
+    }
+
+    if (!summary.canCalculateRunway) {
+      return 'Cash exists, but there is no reliable burn baseline yet. Add recurring costs or team payments first.';
+    }
+
+    if (summary.estimatedRunway < 6) {
+      return 'Runway is below the safety floor. Review recurring tools, salaries, and the largest category this week.';
+    }
+
+    if (summary.estimatedRunway < 12) {
+      return 'Runway is workable, but still below a clean 12 month planning target.';
+    }
+
+    return 'Runway is above target. Keep reviewing concentration and pending commitments before new spending.';
+  }
+
+  healthToneClass(): string {
+    const score = this.healthScore();
+
+    if (score >= 78) {
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20';
+    }
+
+    if (score >= 55) {
+      return 'bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20';
+    }
+
+    return 'bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-400/20';
+  }
+
+  healthScore(): number {
+    const summary = this.summary();
+    let score = 92;
+
+    if (!summary.hasData) {
+      return 0;
+    }
+
+    if (!summary.canCalculateRunway) {
+      score -= 28;
+    } else if (summary.estimatedRunway < 6) {
+      score -= 30;
+    } else if (summary.estimatedRunway < 12) {
+      score -= 12;
+    }
+
+    if (summary.utilizationPercentage > 80) {
+      score -= 16;
+    } else if (summary.utilizationPercentage > 55) {
+      score -= 8;
+    }
+
+    if (summary.totalPending > 0) {
+      score -= Math.min(16, 6 + summary.pendingPaymentsCount * 2);
+    }
+
+    if (this.topCategoryShare() >= 50) {
+      score -= 8;
+    }
+
+    return Math.max(Math.min(score, 100), 0);
+  }
+
+  healthLabel(): string {
+    const score = this.healthScore();
+
+    if (score >= 78) {
+      return 'Operating well';
+    }
+
+    if (score >= 55) {
+      return 'Needs attention';
+    }
+
+    return 'Founder review needed';
+  }
+
+  runwayGauge(): number {
+    return Math.min(this.summary().runwayProgress, 100);
+  }
+
+  paidShare(): number {
+    const totalFunding = this.summary().totalFunding;
+    return totalFunding > 0 ? Math.min(Math.round((this.summary().totalPaid / totalFunding) * 100), 100) : 0;
+  }
+
+  pendingShare(): number {
+    const totalFunding = this.summary().totalFunding;
+    return totalFunding > 0 ? Math.min(Math.round((this.summary().totalPending / totalFunding) * 100), 100) : 0;
+  }
+
+  availableShare(): number {
+    const totalFunding = this.summary().totalFunding;
+    return totalFunding > 0 ? Math.max(100 - this.paidShare(), 0) : 0;
+  }
+
+  pendingDisplayShare(): number {
+    return Math.min(this.pendingShare(), Math.max(100 - this.paidShare(), 0));
+  }
+
+  availableDisplayShare(): number {
+    return Math.max(100 - this.paidShare() - this.pendingDisplayShare(), 0);
+  }
+
+  pendingRiskShare(): number {
+    const total = this.summary().totalPaid + this.summary().totalPending;
+    return total > 0 ? Math.round((this.summary().totalPending / total) * 100) : 0;
+  }
+
+  categoryShare(amount: number): number {
+    const totalExpenses = this.summary().totalExpenses;
+    return totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0;
+  }
+
+  topCategoryShare(): number {
+    return this.topCategory ? this.categoryShare(this.topCategory.amount) : 0;
+  }
+
+  sourceShare(amount: number): number {
+    const totalExpenses = this.summary().totalExpenses;
+    return totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0;
+  }
+
+  spendMomentum(): string {
+    const active = this.summary().monthlySpendTrend.filter((point) => point.amount > 0);
+
+    if (!active.length) {
+      return 'No spend trend yet';
+    }
+
+    if (active.length === 1) {
+      return `${active[0].month} is the only active spend month`;
+    }
+
+    const latest = active[active.length - 1];
+    const previous = active[active.length - 2];
+    const delta = latest.amount - previous.amount;
+
+    if (delta === 0) {
+      return `${latest.month} spend is flat versus ${previous.month}`;
+    }
+
+    return `${latest.month} spend is ${delta > 0 ? 'up' : 'down'} ${currencyINR(Math.abs(delta))} versus ${previous.month}`;
+  }
+
+  cashEfficiencyCopy(): string {
+    const summary = this.summary();
+
+    if (summary.totalFunding <= 0) {
+      return 'No capital has been recorded yet, so cash efficiency is waiting for funding data.';
+    }
+
+    if (summary.totalPaid <= 0) {
+      return 'Capital is recorded and no paid spend has cleared yet.';
+    }
+
+    return `${summary.utilizationPercentage}% of funding is paid out. ${currencyINR(summary.remainingBalance)} remains available after cleared spend.`;
+  }
+
+  dataConfidenceCopy(): string {
+    const summary = this.summary();
+
+    if (!summary.hasData) {
+      return 'No Firestore ledger data yet.';
+    }
+
+    const activeAreas = [
+      summary.totalFunding > 0,
+      summary.totalExpenses > 0,
+      summary.activeTeamMembers > 0,
+      summary.decisionNotes.length > 0,
+    ].filter(Boolean).length;
+
+    return `${activeAreas} of 4 operating areas have live records: funding, spend, team, and founder notes.`;
+  }
+
+  nextBestAction(): { label: string; detail: string; route: string; icon: string } {
+    const summary = this.summary();
+
+    if (summary.totalFunding <= 0) {
+      return {
+        label: 'Record your first funding source',
+        detail: 'Start with capital so utilization and runway can be calculated.',
+        route: '/funding',
+        icon: 'wallet',
+      };
+    }
+
+    if (!summary.canCalculateRunway) {
+      return {
+        label: 'Add monthly burn data',
+        detail: 'Use salaries, recurring costs, or dated spend to make runway reliable.',
+        route: '/recurring-costs',
+        icon: 'repeat-2',
+      };
+    }
+
+    if (summary.totalPending > 0) {
+      return {
+        label: 'Clear pending commitments',
+        detail: `${currencyINR(summary.totalPending)} is still open across the ledger.`,
+        route: '/expenses',
+        icon: 'calendar-clock',
+      };
+    }
+
+    return {
+      label: 'Review monthly trend',
+      detail: this.spendMomentum(),
+      route: '/reports',
+      icon: 'line-chart',
+    };
+  }
+
   setRange(range: string): void {
     this.selectedRange = range;
     this.showToast(`${range} view selected`);
@@ -221,14 +492,6 @@ export class DashboardComponent implements OnDestroy {
 
   priorityClass(priority: 'High' | 'Medium' | 'Low'): string {
     return priorityClass(priority);
-  }
-
-  directionIcon(direction: Direction): string {
-    return directionIcon(direction);
-  }
-
-  directionClass(direction: Direction): string {
-    return directionClass(direction);
   }
 
   showToast(message: string): void {
