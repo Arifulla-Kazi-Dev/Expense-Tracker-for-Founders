@@ -90,6 +90,15 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
     }
 
+    function coreInviteLookupFieldsUnchanged() {
+      return request.resource.data.inviteId == resource.data.inviteId
+        && request.resource.data.companyId == resource.data.companyId
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.invitedByUid == resource.data.invitedByUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
     match /users/{userId} {
       allow read: if isSelf(userId);
       allow create: if isSelf(userId) && request.resource.data.uid == userId;
@@ -147,11 +156,12 @@ service cloud.firestore {
       }
 
       match /invites/{inviteId} {
-        allow read: if isCompanyMember(companyId)
+        allow get: if isCompanyMember(companyId)
           || (
             resource.data.status == 'pending'
             && resource.data.expiresAt > request.time
           );
+        allow list: if isCompanyMember(companyId);
 
         allow create: if canInvite(companyId)
           && request.resource.data.inviteId == inviteId
@@ -212,6 +222,59 @@ service cloud.firestore {
         allow read: if isCompanyMember(companyId);
         allow write: if canManageFounderNotes(companyId);
       }
+    }
+
+    match /inviteLookups/{token} {
+      allow get: if resource.data.status == 'pending'
+        && resource.data.expiresAt > request.time;
+      allow list: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.inviteId == token
+        && request.resource.data.token == token
+        && request.resource.data.companyId is string
+        && canInvite(request.resource.data.companyId)
+        && request.resource.data.invitedByUid == request.auth.uid
+        && request.resource.data.role != 'founder'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.expiresAt > request.time;
+
+      allow update: if (
+          canInvite(resource.data.companyId)
+          && coreInviteLookupFieldsUnchanged()
+          && request.resource.data.status == 'revoked'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        )
+        || (
+          signedIn()
+          && coreInviteLookupFieldsUnchanged()
+          && resource.data.status == 'pending'
+          && resource.data.expiresAt > request.time
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.acceptedByUid == request.auth.uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt', 'acceptedByUid', 'updatedAt'])
+        )
+        || (
+          canInvite(resource.data.companyId)
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'inviteId',
+            'companyId',
+            'companyName',
+            'token',
+            'role',
+            'invitedByUid',
+            'invitedByName',
+            'status',
+            'expiresAt',
+            'createdAt',
+            'acceptedAt',
+            'acceptedByUid'
+          ])
+        );
+
+      allow delete: if canInvite(resource.data.companyId);
     }
   }
 }

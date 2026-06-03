@@ -4,19 +4,19 @@ import {
   Firestore,
   Timestamp,
   collection,
-  collectionGroup,
   collectionSnapshots,
   doc,
-  getDocs,
+  getDoc,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
+  writeBatch,
 } from '@angular/fire/firestore';
-import { Observable, catchError, firstValueFrom, map, of, shareReplay, switchMap, take } from 'rxjs';
+import { Observable, catchError, firstValueFrom, map, of, shareReplay, switchMap, take, tap } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { CompanyInvite, CreateInviteInput } from '../models/company.model';
 import { INVITABLE_ROLES, roleDisplayName } from '../models/role.model';
 import { AuthService } from './auth.service';
@@ -30,6 +30,7 @@ export class InviteService {
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
+  private readonly lookupSyncTokens = new Set<string>();
 
   readonly invites$: Observable<CompanyInvite[]> = this.companyService.activeCompanyId$.pipe(
     switchMap((companyId) => {
@@ -40,6 +41,7 @@ export class InviteService {
       const invitesRef = collection(this.firestore, `companies/${companyId}/invites`);
       return collectionSnapshots(query(invitesRef, orderBy('createdAt', 'desc'))).pipe(
         map((snapshots) => snapshots.map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as CompanyInvite)),
+        tap((invites) => void this.ensureInviteLookups(invites)),
         catchError((error) => {
           console.error('Invites load failed', error);
           return of([]);
@@ -82,10 +84,16 @@ export class InviteService {
       createdAt: null,
     };
 
-    await setDoc(doc(this.firestore, `companies/${companyId}/invites/${token}`), {
+    const createdAt = serverTimestamp();
+    const batch = writeBatch(this.firestore);
+
+    batch.set(doc(this.firestore, `companies/${companyId}/invites/${token}`), {
       ...withoutUndefined(invite as unknown as Record<string, unknown>),
-      createdAt: serverTimestamp(),
+      createdAt,
     });
+    batch.set(doc(this.firestore, `inviteLookups/${token}`), publicInvitePayload(invite, createdAt));
+
+    await batch.commit();
 
     return invite;
   }
@@ -97,9 +105,10 @@ export class InviteService {
       return null;
     }
 
-    const inviteQuery = query(collectionGroup(this.firestore, 'invites'), where('token', '==', normalizedToken));
-    const snapshots = await getDocs(inviteQuery);
-    const invite = snapshots.docs.map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as CompanyInvite)[0] ?? null;
+    const snapshot = await getDoc(doc(this.firestore, `inviteLookups/${normalizedToken}`));
+    const invite = snapshot.exists()
+      ? ({ ...snapshot.data(), id: snapshot.id } as CompanyInvite)
+      : null;
 
     if (!invite) {
       return null;
@@ -112,18 +121,22 @@ export class InviteService {
   }
 
   async revokeInvite(invite: CompanyInvite): Promise<void> {
-    await updateDoc(doc(this.firestore, `companies/${invite.companyId}/invites/${invite.inviteId}`), {
+    const update = {
       status: 'revoked',
       updatedAt: serverTimestamp(),
-    });
+    };
+    const batch = writeBatch(this.firestore);
+
+    batch.update(doc(this.firestore, `companies/${invite.companyId}/invites/${invite.inviteId}`), update);
+    batch.update(doc(this.firestore, `inviteLookups/${invite.token}`), update);
+
+    await batch.commit();
   }
 
   inviteLink(token: string): string {
-    if (!this.isBrowser) {
-      return `/register?inviteToken=${encodeURIComponent(token)}`;
-    }
-
-    const baseHref = this.document.querySelector('base')?.href ?? `${window.location.origin}/`;
+    const baseHref = normalizeBaseUrl(environment.publicAppUrl)
+      ?? (this.isBrowser ? this.document.querySelector('base')?.href : null)
+      ?? (this.isBrowser ? `${window.location.origin}/` : '/');
     return new URL(`register?inviteToken=${encodeURIComponent(token)}`, baseHref).toString();
   }
 
@@ -138,6 +151,27 @@ export class InviteService {
     }
 
     return isExpired(invite.expiresAt) ? 'expired' : 'pending';
+  }
+
+  private async ensureInviteLookups(invites: CompanyInvite[]): Promise<void> {
+    const pendingInvites = invites.filter((invite) => invite.status === 'pending' && invite.token);
+
+    for (const invite of pendingInvites) {
+      if (this.lookupSyncTokens.has(invite.token)) {
+        continue;
+      }
+
+      this.lookupSyncTokens.add(invite.token);
+
+      await setDoc(
+        doc(this.firestore, `inviteLookups/${invite.token}`),
+        publicInvitePayload(invite, invite.createdAt ?? serverTimestamp()),
+        { merge: true },
+      ).catch((error) => {
+        this.lookupSyncTokens.delete(invite.token);
+        console.error('Invite lookup sync failed', error);
+      });
+    }
   }
 }
 
@@ -165,6 +199,23 @@ function withoutUndefined(value: Record<string, unknown>): Record<string, unknow
   return Object.fromEntries(Object.entries(value).filter((entry) => entry[1] !== undefined));
 }
 
+function publicInvitePayload(invite: CompanyInvite, createdAt: unknown): Record<string, unknown> {
+  return withoutUndefined({
+    inviteId: invite.inviteId,
+    companyId: invite.companyId,
+    companyName: invite.companyName,
+    token: invite.token,
+    role: invite.role,
+    invitedByUid: invite.invitedByUid,
+    invitedByName: invite.invitedByName,
+    status: invite.status,
+    expiresAt: invite.expiresAt,
+    createdAt,
+    acceptedAt: invite.acceptedAt,
+    acceptedByUid: invite.acceptedByUid,
+  });
+}
+
 function isExpired(value: unknown): boolean {
   const expiresAt = value instanceof Timestamp
     ? value.toDate()
@@ -175,4 +226,14 @@ function isExpired(value: unknown): boolean {
         : null;
 
   return expiresAt ? expiresAt.getTime() <= Date.now() : false;
+}
+
+function normalizeBaseUrl(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
 }

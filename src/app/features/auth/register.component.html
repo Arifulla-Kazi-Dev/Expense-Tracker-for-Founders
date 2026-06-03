@@ -6,6 +6,7 @@
     </div>
     <a
       routerLink="/login"
+      [queryParams]="isInviteFlow ? { inviteToken } : null"
       class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
     >
       Sign in
@@ -30,9 +31,9 @@
       </div>
 
       <div class="p-6 sm:p-8">
-        <a routerLink="/login" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-white">
+        <a routerLink="/login" [queryParams]="isInviteFlow ? { inviteToken } : null" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-white">
           <svg lucideIcon="arrow-left" class="size-4"></svg>
-          Back to login
+          {{ isInviteFlow ? 'Sign in instead' : 'Back to login' }}
         </a>
 
         <div class="mt-8">
@@ -67,21 +68,41 @@
         <form class="mt-8 grid gap-4" [formGroup]="form" (ngSubmit)="register()">
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="grid gap-2 text-sm font-medium">
-              Founder name
+              {{ nameLabel }}
               <div class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
                 <svg lucideIcon="user" class="size-4 text-slate-400"></svg>
-                <input formControlName="name" type="text" autocomplete="name" class="w-full bg-transparent text-sm outline-none" placeholder="Raj Founder">
+                <input formControlName="name" type="text" autocomplete="name" class="w-full bg-transparent text-sm outline-none" [placeholder]="namePlaceholder">
               </div>
             </label>
 
+            @if (isInviteFlow) {
+              <label class="grid gap-2 text-sm font-medium">
+                Assigned role
+                <div class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
+                  <svg lucideIcon="shield-check" class="size-4 text-slate-400"></svg>
+                  <input type="text" class="w-full bg-transparent text-sm outline-none" [value]="roleLabel" disabled>
+                </div>
+              </label>
+            } @else {
+              <label class="grid gap-2 text-sm font-medium">
+                Company name
+                <div class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
+                  <svg lucideIcon="building" class="size-4 text-slate-400"></svg>
+                  <input formControlName="companyName" type="text" class="w-full bg-transparent text-sm outline-none" placeholder="Startup name">
+                </div>
+              </label>
+            }
+          </div>
+
+          @if (isInviteFlow) {
             <label class="grid gap-2 text-sm font-medium">
-              Company
-              <div class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
+              Company name
+              <div class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
                 <svg lucideIcon="building" class="size-4 text-slate-400"></svg>
-                <input formControlName="companyName" type="text" class="w-full bg-transparent text-sm outline-none" placeholder="Startup name">
+                <input formControlName="companyName" type="text" class="w-full bg-transparent text-sm outline-none" placeholder="Company from invite">
               </div>
             </label>
-          </div>
+          }
 
           <label class="grid gap-2 text-sm font-medium">
             Email

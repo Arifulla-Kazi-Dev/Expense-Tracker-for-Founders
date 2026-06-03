@@ -42,6 +42,7 @@ export class RegisterComponent implements OnInit {
     this.inviteToken = this.readInviteToken();
 
     if (this.inviteToken) {
+      this.form.controls.companyName.disable();
       void this.validateInvite(this.inviteToken);
     }
   }
@@ -56,6 +57,14 @@ export class RegisterComponent implements OnInit {
 
   get companyLabel(): string {
     return this.invite?.companyName ?? 'Your company';
+  }
+
+  get nameLabel(): string {
+    return `${this.isInviteFlow ? this.roleLabel : 'Founder'} name`;
+  }
+
+  get namePlaceholder(): string {
+    return this.isInviteFlow ? 'Enter your name' : 'Your name';
   }
 
   get canSubmit(): boolean {

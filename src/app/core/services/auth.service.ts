@@ -15,14 +15,11 @@ import {
 import {
   Firestore,
   collection,
-  collectionGroup,
   doc,
   docData,
   getDoc,
   getDocs,
-  query,
   serverTimestamp,
-  where,
   writeBatch,
 } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, catchError, distinctUntilChanged, map, of, shareReplay, switchMap } from 'rxjs';
@@ -367,6 +364,7 @@ export class AuthService {
     const profileRef = doc(this.firestore, `users/${user.uid}`);
     const memberRef = doc(this.firestore, `companies/${invite.companyId}/members/${user.uid}`);
     const inviteRef = doc(this.firestore, `companies/${invite.companyId}/invites/${invite.inviteId}`);
+    const inviteLookupRef = doc(this.firestore, `inviteLookups/${invite.token}`);
     const profile: Record<string, unknown> = {
       uid: user.uid,
       name,
@@ -405,14 +403,25 @@ export class AuthService {
       acceptedByUid: user.uid,
       updatedAt: now,
     });
+    batch.update(inviteLookupRef, {
+      status: 'accepted',
+      acceptedAt: now,
+      acceptedByUid: user.uid,
+      updatedAt: now,
+    });
 
     await this.runInFirebaseContext(() => batch.commit());
   }
 
   private async findInviteByToken(token: string): Promise<CompanyInvite | null> {
-    const inviteQuery = query(collectionGroup(this.firestore, 'invites'), where('token', '==', token.trim()));
-    const snapshots = await this.runInFirebaseContext(() => getDocs(inviteQuery));
-    return snapshots.docs.map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as CompanyInvite)[0] ?? null;
+    const normalizedToken = token.trim();
+
+    if (!normalizedToken) {
+      return null;
+    }
+
+    const snapshot = await this.runInFirebaseContext(() => getDoc(doc(this.firestore, `inviteLookups/${normalizedToken}`)));
+    return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as CompanyInvite) : null;
   }
 
   private async migrateLegacyLedgerData(

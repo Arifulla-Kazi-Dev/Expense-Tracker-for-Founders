@@ -1,6 +1,7 @@
 export const environment = {
   production: false,
   firestoreDatabaseId: 'default',
+  publicAppUrl: 'https://arifulla-kazi-dev.github.io/Expense-Tracker-for-Founders/',
   firebaseConfig: {
   apiKey: "AIzaSyAmZxdGuEkY-VDVe0hfwoX9JYqUF8Xs1CM",
   authDomain: "expense-tracker-for-founders.firebaseapp.com",
