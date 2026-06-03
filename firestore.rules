@@ -225,9 +225,20 @@ service cloud.firestore {
     }
 
     match /inviteLookups/{token} {
-      allow get: if resource.data.status == 'pending'
-        && resource.data.expiresAt > request.time;
-      allow list: if false;
+      allow get: if (
+          resource.data.status == 'pending'
+          && resource.data.expiresAt > request.time
+        )
+        || (
+          signedIn()
+          && resource.data.acceptedByUid == request.auth.uid
+        )
+        || canInvite(resource.data.companyId);
+      allow list: if signedIn()
+        && (
+          resource.data.acceptedByUid == request.auth.uid
+          || canInvite(resource.data.companyId)
+        );
 
       allow create: if signedIn()
         && request.resource.data.inviteId == token

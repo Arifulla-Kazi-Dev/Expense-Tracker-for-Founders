@@ -89,7 +89,7 @@ export class RegisterComponent implements OnInit {
     try {
       await this.authService.register({
         ...this.form.getRawValue(),
-        inviteToken: this.invite?.token ?? null,
+        inviteToken: this.currentInviteToken(),
       });
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
@@ -109,7 +109,12 @@ export class RegisterComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      await this.authService.loginWithGoogle(this.invite?.token ?? null);
+      const formValue = this.form.getRawValue();
+
+      await this.authService.loginWithGoogle(this.currentInviteToken(), {
+        companyName: formValue.companyName,
+        name: formValue.name,
+      });
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -162,6 +167,10 @@ export class RegisterComponent implements OnInit {
     if (this.isBrowser) {
       sessionStorage.removeItem('inviteToken');
     }
+  }
+
+  private currentInviteToken(): string | null {
+    return this.invite?.token ?? (this.inviteToken.trim() || null);
   }
 }
 

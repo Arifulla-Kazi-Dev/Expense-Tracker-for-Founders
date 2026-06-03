@@ -47,7 +47,7 @@ export class LoginComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      await this.authService.login(this.form.controls.email.value, this.form.controls.password.value, this.inviteToken);
+      await this.authService.login(this.form.controls.email.value, this.form.controls.password.value, this.currentInviteToken());
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -66,7 +66,7 @@ export class LoginComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      await this.authService.loginWithGoogle(this.inviteToken);
+      await this.authService.loginWithGoogle(this.currentInviteToken());
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -92,6 +92,10 @@ export class LoginComponent implements OnInit {
     if (this.isBrowser) {
       sessionStorage.removeItem('inviteToken');
     }
+  }
+
+  private currentInviteToken(): string | null {
+    return this.inviteToken.trim() || null;
   }
 }
 

@@ -19,7 +19,10 @@ import {
   docData,
   getDoc,
   getDocs,
+  limit,
+  query,
   serverTimestamp,
+  where,
   writeBatch,
 } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, catchError, distinctUntilChanged, map, of, shareReplay, switchMap } from 'rxjs';
@@ -43,6 +46,7 @@ interface ProfileSyncOverrides extends Partial<Pick<UserProfile, 'companyName' |
 
 const AUTH_TIMEOUT_MS = 15000;
 const PROFILE_SYNC_TIMEOUT_MS = 15000;
+const INVITE_TOKEN_STORAGE_KEY = 'inviteToken';
 const LEGACY_LEDGER_COLLECTIONS = [
   'funding',
   'expenses',
@@ -60,6 +64,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly profileSyncErrorSubject = new BehaviorSubject<string>('');
   private isHandlingExplicitAuthFlow = false;
+  private pendingInviteToken = '';
 
   readonly user$: Observable<User | null> = authState(this.auth).pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -112,6 +117,7 @@ export class AuthService {
 
   async register(credentials: RegisterCredentials): Promise<void> {
     let result: Awaited<ReturnType<typeof createUserWithEmailAndPassword>>;
+    const inviteToken = this.resolveInviteToken(credentials.inviteToken);
     this.isHandlingExplicitAuthFlow = true;
 
     try {
@@ -142,15 +148,17 @@ export class AuthService {
       await this.ensureUserProfileWithRetry(result.user, {
         companyName: credentials.companyName,
         includeCreatedAt: true,
-        inviteToken: credentials.inviteToken,
+        inviteToken,
         name: credentials.name,
       });
+      this.clearPendingInviteToken(inviteToken);
     } finally {
       this.isHandlingExplicitAuthFlow = false;
     }
   }
 
   async login(email: string, password: string, inviteToken?: string | null): Promise<void> {
+    const resolvedInviteToken = this.resolveInviteToken(inviteToken);
     this.isHandlingExplicitAuthFlow = true;
 
     try {
@@ -160,13 +168,18 @@ export class AuthService {
         'Firebase Auth login is taking too long. Check your connection and Firebase Auth settings.',
       );
 
-      await this.ensureUserProfileWithRetry(result.user, { includeCreatedAt: true, inviteToken });
+      await this.ensureUserProfileWithRetry(result.user, { includeCreatedAt: true, inviteToken: resolvedInviteToken });
+      this.clearPendingInviteToken(resolvedInviteToken);
     } finally {
       this.isHandlingExplicitAuthFlow = false;
     }
   }
 
-  async loginWithGoogle(inviteToken?: string | null): Promise<void> {
+  async loginWithGoogle(
+    inviteToken?: string | null,
+    profileOverrides: Partial<Pick<UserProfile, 'companyName' | 'name'>> = {},
+  ): Promise<void> {
+    const resolvedInviteToken = this.resolveInviteToken(inviteToken);
     this.isHandlingExplicitAuthFlow = true;
     const provider = new GoogleAuthProvider();
 
@@ -177,7 +190,21 @@ export class AuthService {
         'Google Sign-In is taking too long. Check popup permissions and Firebase Auth settings.',
       );
 
-      await this.ensureUserProfileWithRetry(result.user, { includeCreatedAt: true, inviteToken });
+      if (profileOverrides.name?.trim()) {
+        await withTimeout(
+          this.runInFirebaseContext(() => updateProfile(result.user, { displayName: profileOverrides.name?.trim() })),
+          PROFILE_SYNC_TIMEOUT_MS,
+          'Firebase profile display name update timed out.',
+        ).catch((error) => this.profileSyncErrorSubject.next(readableFirebaseError(error)));
+      }
+
+      await this.ensureUserProfileWithRetry(result.user, {
+        companyName: profileOverrides.companyName,
+        includeCreatedAt: true,
+        inviteToken: resolvedInviteToken,
+        name: profileOverrides.name?.trim() || undefined,
+      });
+      this.clearPendingInviteToken(resolvedInviteToken);
     } finally {
       this.isHandlingExplicitAuthFlow = false;
     }
@@ -248,6 +275,23 @@ export class AuthService {
 
     if (overrides.inviteToken) {
       await this.acceptInviteForUser(user, overrides.inviteToken, name, existingData, Boolean(overrides.includeCreatedAt));
+      return;
+    }
+
+    if (this.hasPendingInviteToken()) {
+      return;
+    }
+
+    const acceptedInvite = await this.findAcceptedInviteForUser(user.uid);
+
+    if (acceptedInvite) {
+      await this.repairProfileFromAcceptedInvite(
+        user,
+        acceptedInvite,
+        existingData,
+        name,
+        Boolean(overrides.includeCreatedAt),
+      );
       return;
     }
 
@@ -372,7 +416,7 @@ export class AuthService {
       photoURL: user.photoURL,
       role: invite.role,
       companyName: invite.companyName,
-      defaultCompanyId: existingData?.defaultCompanyId ?? invite.companyId,
+      defaultCompanyId: invite.companyId,
       activeCompanyId: invite.companyId,
       updatedAt: now,
       lastLoginAt: now,
@@ -413,6 +457,36 @@ export class AuthService {
     await this.runInFirebaseContext(() => batch.commit());
   }
 
+  private async repairProfileFromAcceptedInvite(
+    user: User,
+    invite: CompanyInvite,
+    existingData: Partial<UserProfile> | undefined,
+    fallbackName: string,
+    includeCreatedAt: boolean,
+  ): Promise<void> {
+    const now = serverTimestamp();
+    const name = existingData?.name ?? user.displayName ?? fallbackName;
+    const profileRef = doc(this.firestore, `users/${user.uid}`);
+    const profile: Record<string, unknown> = {
+      uid: user.uid,
+      name,
+      email: user.email,
+      photoURL: user.photoURL,
+      role: invite.role,
+      companyName: invite.companyName,
+      defaultCompanyId: invite.companyId,
+      activeCompanyId: invite.companyId,
+      updatedAt: now,
+      lastLoginAt: now,
+    };
+
+    if (includeCreatedAt && !existingData?.createdAt) {
+      profile['createdAt'] = now;
+    }
+
+    await this.runInFirebaseContext(() => writeBatch(this.firestore).set(profileRef, profile, { merge: true }).commit());
+  }
+
   private async findInviteByToken(token: string): Promise<CompanyInvite | null> {
     const normalizedToken = token.trim();
 
@@ -422,6 +496,20 @@ export class AuthService {
 
     const snapshot = await this.runInFirebaseContext(() => getDoc(doc(this.firestore, `inviteLookups/${normalizedToken}`)));
     return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as CompanyInvite) : null;
+  }
+
+  private async findAcceptedInviteForUser(uid: string): Promise<CompanyInvite | null> {
+    const snapshots = await this.runInFirebaseContext(() =>
+      getDocs(query(
+        collection(this.firestore, 'inviteLookups'),
+        where('acceptedByUid', '==', uid),
+        where('status', '==', 'accepted'),
+        limit(1),
+      )),
+    ).catch(() => null);
+
+    const snapshot = snapshots?.docs[0];
+    return snapshot ? ({ ...snapshot.data(), id: snapshot.id } as CompanyInvite) : null;
   }
 
   private async migrateLegacyLedgerData(
@@ -487,6 +575,59 @@ export class AuthService {
   private runInFirebaseContext<T>(operation: () => T): T {
     return runInInjectionContext(this.environmentInjector, operation);
   }
+
+  private resolveInviteToken(inviteToken?: string | null): string | null {
+    const normalized = normalizeInviteToken(inviteToken)
+      || this.pendingInviteToken
+      || this.readStoredInviteToken();
+
+    if (!normalized) {
+      return null;
+    }
+
+    this.rememberInviteToken(normalized);
+    return normalized;
+  }
+
+  private hasPendingInviteToken(): boolean {
+    return Boolean(this.pendingInviteToken || this.readStoredInviteToken());
+  }
+
+  private rememberInviteToken(token: string): void {
+    this.pendingInviteToken = token;
+
+    try {
+      globalThis.sessionStorage?.setItem(INVITE_TOKEN_STORAGE_KEY, token);
+    } catch {
+      // Storage may be unavailable during SSR or in locked-down browsers.
+    }
+  }
+
+  private readStoredInviteToken(): string {
+    try {
+      return normalizeInviteToken(globalThis.sessionStorage?.getItem(INVITE_TOKEN_STORAGE_KEY));
+    } catch {
+      return '';
+    }
+  }
+
+  private clearPendingInviteToken(token?: string | null): void {
+    const normalized = normalizeInviteToken(token);
+
+    if (!normalized || this.pendingInviteToken === normalized) {
+      this.pendingInviteToken = '';
+    }
+
+    try {
+      const storedToken = normalizeInviteToken(globalThis.sessionStorage?.getItem(INVITE_TOKEN_STORAGE_KEY));
+
+      if (!normalized || storedToken === normalized) {
+        globalThis.sessionStorage?.removeItem(INVITE_TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // Storage may be unavailable during SSR or in locked-down browsers.
+    }
+  }
 }
 
 function wait(ms: number): Promise<void> {
@@ -529,6 +670,10 @@ function isEmailAlreadyInUse(error: unknown): boolean {
   const errorWithCode = error as { code?: string; message?: string };
   const value = `${errorWithCode.code ?? ''} ${errorWithCode.message ?? ''}`.toLowerCase();
   return value.includes('email-already-in-use');
+}
+
+function normalizeInviteToken(value: string | null | undefined): string {
+  return value?.trim() ?? '';
 }
 
 function normalizeRole(value: unknown, fallback: UserRole): UserRole {
