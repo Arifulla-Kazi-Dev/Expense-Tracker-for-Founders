@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, docData, serverTimestamp, setDoc } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom, take } from 'rxjs';
 
 import { UserProfile } from '../models/user-profile.model';
 import { AuthService } from './auth.service';
+import { CompanyService } from './company.service';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly authService = inject(AuthService);
+  private readonly companyService = inject(CompanyService);
   private readonly firestore = inject(Firestore);
 
   readonly profile$ = this.authService.profile$;
@@ -23,10 +25,18 @@ export class UserService {
       throw new Error('You must be signed in to update your profile.');
     }
 
+    const currentProfile = await firstValueFrom(this.profile$.pipe(take(1)));
+
+    if (profile.companyName) {
+      await this.companyService.updateCompanyProfile(profile.companyName);
+    }
+
     await setDoc(doc(this.firestore, `users/${uid}`), {
       uid,
-      ...profile,
-      role: 'founder',
+      name: profile.name,
+      photoURL: profile.photoURL ?? null,
+      companyName: profile.companyName ?? currentProfile?.companyName,
+      role: currentProfile?.role ?? 'founder',
       updatedAt: serverTimestamp(),
     }, { merge: true });
   }

@@ -17,15 +17,15 @@
       <div class="hidden border-r border-slate-200 bg-slate-950 p-8 text-white md:flex md:flex-col md:justify-between dark:border-slate-800">
         <div>
           <img src="logo.svg" alt="" class="size-12 rounded-lg">
-          <h1 class="mt-8 text-3xl font-semibold">Build a founder-grade ledger</h1>
+          <h1 class="mt-8 text-3xl font-semibold">Build a company finance workspace</h1>
           <p class="mt-4 text-sm leading-6 text-slate-300">
-            Your profile and every finance collection are stored privately under your authenticated Firebase UID.
+            Company records, members, invites, and finance collections stay scoped to your active startup workspace.
           </p>
         </div>
         <div class="grid gap-3 text-sm text-slate-300">
-          <div class="flex items-center gap-2"><svg lucideIcon="shield-check" class="size-4"></svg> UID-scoped Firestore records</div>
+          <div class="flex items-center gap-2"><svg lucideIcon="shield-check" class="size-4"></svg> Company-scoped Firestore records</div>
           <div class="flex items-center gap-2"><svg lucideIcon="wallet" class="size-4"></svg> Funding and expense CRUD</div>
-          <div class="flex items-center gap-2"><svg lucideIcon="bar-chart-3" class="size-4"></svg> Dynamic runway calculations</div>
+          <div class="flex items-center gap-2"><svg lucideIcon="users" class="size-4"></svg> Invite-based team roles</div>
         </div>
       </div>
 
@@ -37,8 +37,31 @@
 
         <div class="mt-8">
           <p class="text-sm font-medium text-teal-700 dark:text-teal-300">Create account</p>
-          <h2 class="mt-2 text-2xl font-semibold">Start your founder workspace</h2>
-          <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Role defaults to founder and can support more roles later.</p>
+          <h2 class="mt-2 text-2xl font-semibold">{{ isInviteFlow ? 'Join the company workspace' : 'Start your founder workspace' }}</h2>
+          <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+            {{ isInviteFlow ? 'Your company and role come from the invite link.' : 'Founder signup creates the company, profile, and owner member record.' }}
+          </p>
+        </div>
+
+        <div class="mt-5 rounded-lg border px-4 py-3 text-sm" [ngClass]="invitePanelClass()">
+          <div class="flex items-start gap-3">
+            <svg [lucideIcon]="inviteError ? 'alert-circle' : 'shield-check'" class="mt-0.5 size-4 shrink-0"></svg>
+            <div>
+              @if (isInviteLoading) {
+                <p class="font-semibold">Validating invite link...</p>
+                <p class="mt-1 leading-5">Checking workspace and assigned role from Firestore.</p>
+              } @else if (inviteError) {
+                <p class="font-semibold">Invite cannot be used</p>
+                <p class="mt-1 leading-5">{{ inviteError }}</p>
+              } @else if (invite) {
+                <p class="font-semibold">You are joining {{ companyLabel }} as {{ roleLabel }}.</p>
+                <p class="mt-1 leading-5">The role is locked by the invite token and cannot be changed here.</p>
+              } @else {
+                <p class="font-semibold">Role: {{ roleLabel }}</p>
+                <p class="mt-1 leading-5">Founder is the only role available for normal signup.</p>
+              }
+            </div>
+          </div>
         </div>
 
         <form class="mt-8 grid gap-4" [formGroup]="form" (ngSubmit)="register()">
@@ -91,7 +114,7 @@
           <button
             type="submit"
             class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-            [disabled]="isSubmitting"
+            [disabled]="!canSubmit"
           >
             @if (isSubmitting) {
               <svg lucideIcon="loader-circle" class="size-4 animate-spin"></svg>
@@ -105,7 +128,7 @@
         <button
           type="button"
           class="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-950"
-          [disabled]="isSubmitting"
+          [disabled]="!canSubmit"
           (click)="registerWithGoogle()"
         >
           <svg lucideIcon="sparkles" class="size-4"></svg>

@@ -1,8 +1,7 @@
 import type { FieldValue, Timestamp } from '@angular/fire/firestore';
+import type { UserRole } from './role.model';
 
 export type FirestoreDate = Timestamp | FieldValue | Date | string | null;
-
-export type UserRole = 'founder' | 'cofounder' | 'accountant' | 'viewer' | 'admin';
 
 export interface UserProfile {
   uid: string;
@@ -11,7 +10,10 @@ export interface UserProfile {
   photoURL: string | null;
   role: UserRole;
   companyName: string;
+  defaultCompanyId?: string;
+  activeCompanyId?: string;
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
   lastLoginAt: FirestoreDate;
+  legacyDataMigratedAt?: FirestoreDate;
 }

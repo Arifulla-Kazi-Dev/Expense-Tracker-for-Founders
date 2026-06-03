@@ -15,20 +15,22 @@ import type { DocumentData, UpdateData } from '@angular/fire/firestore';
 import { Observable, catchError, map, of, switchMap } from 'rxjs';
 
 import { AuthService } from './auth.service';
+import { PermissionService } from './permission.service';
 
 @Injectable({ providedIn: 'root' })
 export class FirestoreCrudService {
   private readonly firestore = inject(Firestore);
   private readonly authService = inject(AuthService);
+  private readonly permissionService = inject(PermissionService);
 
   list<T>(collectionName: string): Observable<T[]> {
-    return this.authService.uid$.pipe(
-      switchMap((uid) => {
-        if (!uid) {
-          return of([]);
+    return this.permissionService.activeCompanyId$.pipe(
+      switchMap((companyId) => {
+        if (!companyId) {
+          return this.legacyList<T>(collectionName);
         }
 
-        const scopedCollection = collection(this.firestore, `users/${uid}/${collectionName}`);
+        const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
         const scopedQuery = query(scopedCollection, orderBy('createdAt', 'desc'));
         return collectionSnapshots(scopedQuery).pipe(
           map((snapshots) =>
@@ -36,9 +38,10 @@ export class FirestoreCrudService {
               .filter((snapshot) => !snapshot.metadata.hasPendingWrites)
               .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
           ),
+          switchMap((records) => records.length ? of(records) : this.legacyList<T>(collectionName)),
           catchError((error) => {
             console.error('Firestore list failed', error);
-            return of([]);
+            return this.legacyList<T>(collectionName);
           }),
         );
       }),
@@ -47,20 +50,22 @@ export class FirestoreCrudService {
 
   async create<T extends object>(collectionName: string, data: T): Promise<string> {
     const uid = this.requireUid();
-    const scopedCollection = collection(this.firestore, `users/${uid}/${collectionName}`);
+    const companyId = this.requireCompanyId();
+    const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
     const recordRef = doc(scopedCollection);
 
     await withTimeout(
-      setDoc(recordRef, this.withMetadata(data, uid, recordRef.id)),
-      'Create record timed out. Check that Cloud Firestore is created/enabled and rules allow users/{uid} writes.',
+      setDoc(recordRef, this.withMetadata(data, uid, companyId, recordRef.id)),
+      'Create record timed out. Check that Cloud Firestore is created/enabled and rules allow companies/{companyId} writes.',
     );
 
     return recordRef.id;
   }
 
   async update<T extends object>(collectionName: string, id: string, data: Partial<T>): Promise<void> {
-    const uid = this.requireUid();
-    const recordRef = doc(this.firestore, `users/${uid}/${collectionName}/${id}`);
+    this.requireUid();
+    const companyId = this.requireCompanyId();
+    const recordRef = doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`);
 
     const updateData = this.sanitize({
       ...data,
@@ -69,23 +74,25 @@ export class FirestoreCrudService {
 
     await withTimeout(
       updateDoc(recordRef, updateData),
-      'Update record timed out. Check that Cloud Firestore is created/enabled and rules allow users/{uid} writes.',
+      'Update record timed out. Check that Cloud Firestore is created/enabled and rules allow companies/{companyId} writes.',
     );
   }
 
   async delete(collectionName: string, id: string): Promise<void> {
-    const uid = this.requireUid();
+    this.requireUid();
+    const companyId = this.requireCompanyId();
     await withTimeout(
-      deleteDoc(doc(this.firestore, `users/${uid}/${collectionName}/${id}`)),
-      'Delete record timed out. Check that Cloud Firestore is created/enabled and rules allow users/{uid} writes.',
+      deleteDoc(doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`)),
+      'Delete record timed out. Check that Cloud Firestore is created/enabled and rules allow companies/{companyId} writes.',
     );
   }
 
-  private withMetadata<T extends object>(data: T, uid: string, id: string): Record<string, unknown> {
+  private withMetadata<T extends object>(data: T, uid: string, companyId: string, id: string): Record<string, unknown> {
     return this.sanitize({
       ...data,
       id,
       uid,
+      companyId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -103,6 +110,36 @@ export class FirestoreCrudService {
     }
 
     return uid;
+  }
+
+  private requireCompanyId(): string {
+    const companyId = this.permissionService.activeCompanyId;
+
+    if (!companyId) {
+      throw new Error('No active company workspace is selected.');
+    }
+
+    return companyId;
+  }
+
+  private legacyList<T>(collectionName: string): Observable<T[]> {
+    const uid = this.authService.currentUser?.uid;
+
+    if (!uid) {
+      return of([]);
+    }
+
+    return collectionSnapshots(collection(this.firestore, `users/${uid}/${collectionName}`)).pipe(
+      map((snapshots) =>
+        snapshots
+          .filter((snapshot) => !snapshot.metadata.hasPendingWrites)
+          .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
+      ),
+      catchError((error) => {
+        console.error('Legacy Firestore list failed', error);
+        return of([]);
+      }),
+    );
   }
 }
 
@@ -132,7 +169,7 @@ function readableFirestoreError(error: unknown): string {
   }
 
   if (normalized.includes('permission-denied') || normalized.includes('insufficient permissions')) {
-    return 'Firestore rejected the write. Publish the rules from firestore.rules so users can write only under users/{uid}.';
+    return 'Firestore rejected the write. Publish the rules from firestore.rules so company members can write only inside their workspace.';
   }
 
   if (normalized.includes('offline') || normalized.includes('unavailable')) {

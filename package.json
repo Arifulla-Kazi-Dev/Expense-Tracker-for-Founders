@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --configuration development --hmr=false",
     "build": "ng build",
     "build:github": "ng build --configuration production --base-href /Expense-Tracker-for-Founders/",
     "watch": "ng build --watch --configuration development",

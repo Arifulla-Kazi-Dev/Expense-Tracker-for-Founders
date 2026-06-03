@@ -1,3 +1,5 @@
+import type { Permission } from './role.model';
+
 export type Tone = 'teal' | 'emerald' | 'sky' | 'amber' | 'rose' | 'slate';
 export type PaymentStatus = 'Paid' | 'Pending' | 'Partially Paid';
 export type Direction = 'up' | 'down' | 'flat';
@@ -6,6 +8,7 @@ export interface NavigationItem {
   label: string;
   icon: string;
   route: string;
+  permission?: Permission;
 }
 
 export interface FounderMetric {

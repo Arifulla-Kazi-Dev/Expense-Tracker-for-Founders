@@ -6,8 +6,10 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { mobileNavigationItems, navigationItems } from '../../core/data/navigation.data';
+import { NavigationItem } from '../../core/models/dashboard.models';
 import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PermissionService } from '../../core/services/permission.service';
 
 @Component({
   selector: 'app-shell',
@@ -33,6 +35,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly authService = inject(AuthService);
   private readonly dashboardService = inject(DashboardService);
+  private readonly permissionService = inject(PermissionService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
   readonly profileSyncError = toSignal(this.authService.profileSyncError$, { initialValue: '' });
@@ -60,6 +63,14 @@ export class AppShellComponent implements OnInit, OnDestroy {
     this.isDarkMode = !this.isDarkMode;
     this.applyTheme();
     this.showToast(`${this.isDarkMode ? 'Dark' : 'Light'} mode enabled`);
+  }
+
+  visibleNavigationItems(): NavigationItem[] {
+    return navigationItems.filter((item) => this.canAccessNavigationItem(item));
+  }
+
+  visibleMobileNavigationItems(): NavigationItem[] {
+    return mobileNavigationItems.filter((item) => this.canAccessNavigationItem(item));
   }
 
   toggleMobileMenu(): void {
@@ -118,6 +129,10 @@ export class AppShellComponent implements OnInit, OnDestroy {
       .join('') || 'F';
   }
 
+  roleLabel(): string {
+    return this.permissionService.roleLabel();
+  }
+
   runwayLabel(): string {
     return this.summary().runwayLabel;
   }
@@ -141,6 +156,10 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
     this.document.documentElement.classList.toggle('dark', this.isDarkMode);
     localStorage.setItem('expense-tracker-theme', this.isDarkMode ? 'dark' : 'light');
+  }
+
+  private canAccessNavigationItem(item: NavigationItem): boolean {
+    return !item.permission || this.permissionService.can(item.permission);
   }
 
   private clearTimer(timer?: ReturnType<typeof setTimeout>): void {

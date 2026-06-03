@@ -72,6 +72,10 @@
             },
             "development": {
               "aot": true,
+              "polyfills": [
+                "@angular/compiler",
+                "zone.js"
+              ],
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true

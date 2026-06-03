@@ -1,0 +1,218 @@
+<main class="px-3 pb-24 pt-4 sm:px-5 lg:px-7 lg:pb-10">
+  <section class="ui-shell rounded-lg p-5">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div class="max-w-3xl">
+        <div class="flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
+          <svg lucideIcon="users" class="size-4"></svg>
+          Team workspace
+        </div>
+        <h2 class="mt-3 text-2xl font-semibold sm:text-3xl">Members, roles, and secure invite links</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+          Invite finance, operations, HR, auditors, and investor viewers into {{ company()?.companyName || 'this company' }} with role-scoped access.
+        </p>
+      </div>
+
+      <div class="grid gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-950/70">
+        <span class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Signed in role</span>
+        <span class="font-semibold">{{ profile()?.role ? roleLabel(profile()!.role) : 'No role assigned' }}</span>
+        <span class="text-xs text-slate-500 dark:text-slate-400">{{ profile()?.email }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-4 grid gap-3 md:grid-cols-3">
+    <article class="ui-card rounded-lg p-4">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Active members</p>
+      <p class="mt-2 text-2xl font-semibold">{{ activeMembers() }}</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Joined company workspace</p>
+    </article>
+    <article class="ui-card rounded-lg p-4">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Pending invites</p>
+      <p class="mt-2 text-2xl font-semibold">{{ pendingInvites().length }}</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Open invite links</p>
+    </article>
+    <article class="ui-card rounded-lg p-4">
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Company</p>
+      <p class="mt-2 truncate text-2xl font-semibold">{{ company()?.companyName || 'Not selected' }}</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Active workspace</p>
+    </article>
+  </section>
+
+  @if (errorMessage) {
+    <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100" role="alert">
+      <div class="flex items-start gap-3">
+        <svg lucideIcon="alert-circle" class="mt-0.5 size-4 shrink-0"></svg>
+        <p>{{ errorMessage }}</p>
+      </div>
+    </div>
+  }
+
+  <section class="mt-4 grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
+    <article class="ui-panel rounded-lg p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Invite members</p>
+          <h3 class="mt-1 text-xl font-semibold">Generate invite link</h3>
+        </div>
+        <div class="rounded-lg bg-teal-50 p-2 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-200 dark:ring-teal-400/20">
+          <svg lucideIcon="mail" class="size-5"></svg>
+        </div>
+      </div>
+
+      @if (canInvite()) {
+        <form class="mt-5 grid gap-4" [formGroup]="inviteForm" (ngSubmit)="createInvite()">
+          <label class="grid gap-2 text-sm font-medium">
+            Role
+            <select formControlName="role" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900">
+              @for (role of invitableRoles; track role) {
+                <option [value]="role">{{ roleLabel(role) }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="grid gap-2 text-sm font-medium">
+              Email optional
+              <input formControlName="invitedEmail" type="email" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900" placeholder="teammate@company.com">
+            </label>
+            <label class="grid gap-2 text-sm font-medium">
+              WhatsApp optional
+              <input formControlName="invitedPhone" type="tel" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900" placeholder="+91...">
+            </label>
+          </div>
+
+          <label class="grid gap-2 text-sm font-medium">
+            Expiry days
+            <input formControlName="expiryDays" type="number" min="1" max="30" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900">
+          </label>
+
+          <button type="submit" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200" [disabled]="isBusy">
+            @if (isBusy) {
+              <svg lucideIcon="loader-circle" class="size-4 animate-spin"></svg>
+            } @else {
+              <svg lucideIcon="plus" class="size-4"></svg>
+            }
+            Generate invite
+          </button>
+        </form>
+      } @else {
+        <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+          Your role can view this workspace but cannot invite members.
+        </div>
+      }
+
+      <div class="mt-6">
+        <h4 class="text-sm font-semibold">Pending invites</h4>
+        @if (pendingInvites().length) {
+          <div class="mt-3 grid gap-3">
+            @for (invite of pendingInvites(); track invite.inviteId) {
+              <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/70">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-semibold">{{ roleLabel(invite.role) }}</p>
+                    <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{{ invite.invitedEmail || invite.invitedPhone || 'Open invite link' }}</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Expires {{ dateLabel(invite.expiresAt) }}</p>
+                  </div>
+                  <span class="rounded-full px-2 py-1 text-xs font-semibold ring-1" [ngClass]="statusClass(invite.status)">{{ invite.status }}</span>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900" (click)="copyInvite(invite)">
+                    <svg lucideIcon="file-text" class="size-3.5"></svg>
+                    Copy link
+                  </button>
+                  <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900" (click)="openWhatsApp(invite)">
+                    <svg lucideIcon="upload" class="size-3.5"></svg>
+                    WhatsApp
+                  </button>
+                  @if (canInvite()) {
+                    <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 dark:border-rose-400/20 dark:text-rose-200 dark:hover:bg-rose-400/10" (click)="revokeInvite(invite)">
+                      <svg lucideIcon="x" class="size-3.5"></svg>
+                      Revoke
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+            No pending invites.
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="ui-panel rounded-lg p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Members</p>
+          <h3 class="mt-1 text-xl font-semibold">Company access</h3>
+        </div>
+        <div class="rounded-lg bg-sky-50 p-2 text-sky-700 ring-1 ring-sky-100 dark:bg-sky-400/10 dark:text-sky-200 dark:ring-sky-400/20">
+          <svg lucideIcon="shield-check" class="size-5"></svg>
+        </div>
+      </div>
+
+      @if (members().length) {
+        <div class="mt-5 grid gap-3">
+          @for (member of members(); track member.uid) {
+            <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/70">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex min-w-0 items-center gap-3">
+                  <div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">
+                    {{ member.name.slice(0, 1).toUpperCase() || 'M' }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate font-semibold">{{ member.name }}</p>
+                    <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{{ member.email || 'No email' }}</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Joined {{ dateLabel(member.joinedAt) }}</p>
+                  </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:min-w-[28rem] lg:items-center">
+                  <div class="grid gap-2">
+                    <span class="rounded-full px-2 py-1 text-xs font-semibold ring-1 w-fit" [ngClass]="statusClass(member.status)">{{ member.status }}</span>
+                    @if (canChangeMember(member)) {
+                      <select [value]="member.role" class="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900" (change)="changeRole(member, $event)">
+                        @for (role of invitableRoles; track role) {
+                          <option [value]="role">{{ roleLabel(role) }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <p class="text-sm font-semibold">{{ roleLabel(member.role) }}</p>
+                    }
+                  </div>
+
+                  <div class="flex gap-2">
+                    <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:hover:bg-slate-900" [disabled]="!canChangeMember(member)" (click)="suspend(member)">
+                      Suspend
+                    </button>
+                    <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-400/20 dark:text-rose-200 dark:hover:bg-rose-400/10" [disabled]="!canChangeMember(member)" (click)="remove(member)">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-950">
+          <div class="mx-auto flex size-14 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+            <svg lucideIcon="users" class="size-6"></svg>
+          </div>
+          <p class="mt-4 text-sm font-semibold">No members loaded</p>
+          <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
+            Members appear here after the company workspace is created and member records sync from Firestore.
+          </p>
+        </div>
+      }
+    </article>
+  </section>
+
+  @if (toastMessage) {
+    <div class="fixed bottom-20 left-1/2 z-50 w-[min(92vw,28rem)] -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 lg:bottom-6">
+      {{ toastMessage }}
+    </div>
+  }
+</main>

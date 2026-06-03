@@ -2,12 +2,215 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    function signedIn() {
+      return request.auth != null;
+    }
 
-      match /{collection}/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function memberPath(companyId, uid) {
+      return /databases/$(database)/documents/companies/$(companyId)/members/$(uid);
+    }
+
+    function invitePath(companyId, inviteId) {
+      return /databases/$(database)/documents/companies/$(companyId)/invites/$(inviteId);
+    }
+
+    function isCompanyMember(companyId) {
+      return signedIn()
+        && exists(memberPath(companyId, request.auth.uid))
+        && get(memberPath(companyId, request.auth.uid)).data.status == 'active';
+    }
+
+    function role(companyId) {
+      return get(memberPath(companyId, request.auth.uid)).data.role;
+    }
+
+    function hasRole(companyId, roles) {
+      return isCompanyMember(companyId) && roles.hasAny([role(companyId)]);
+    }
+
+    function canManageCompany(companyId) {
+      return hasRole(companyId, ['founder', 'cofounder']);
+    }
+
+    function isCompanyOwner() {
+      return signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function canInvite(companyId) {
+      return hasRole(companyId, ['founder', 'cofounder']);
+    }
+
+    function canManageFinance(companyId) {
+      return hasRole(companyId, ['founder', 'cofounder', 'finance-manager']);
+    }
+
+    function canManageExpenses(companyId) {
+      return hasRole(companyId, ['founder', 'cofounder', 'finance-manager', 'operations-manager']);
+    }
+
+    function canManageTeamPayments(companyId) {
+      return hasRole(companyId, ['founder', 'cofounder', 'finance-manager', 'hr-manager']);
+    }
+
+    function canManageFounderNotes(companyId) {
+      return hasRole(companyId, ['founder', 'cofounder', 'operations-manager']);
+    }
+
+    function validInviteForJoin(companyId, memberRole) {
+      return request.resource.data.inviteId is string
+        && exists(invitePath(companyId, request.resource.data.inviteId))
+        && get(invitePath(companyId, request.resource.data.inviteId)).data.status == 'pending'
+        && get(invitePath(companyId, request.resource.data.inviteId)).data.expiresAt > request.time
+        && get(invitePath(companyId, request.resource.data.inviteId)).data.role == memberRole
+        && memberRole != 'founder';
+    }
+
+    function profileRoleMatchesMembership(userId) {
+      return request.resource.data.activeCompanyId is string
+        && existsAfter(memberPath(request.resource.data.activeCompanyId, userId))
+        && getAfter(memberPath(request.resource.data.activeCompanyId, userId)).data.role == request.resource.data.role;
+    }
+
+    function coreMemberFieldsUnchanged() {
+      return request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.invitedBy == resource.data.invitedBy;
+    }
+
+    function coreInviteFieldsUnchanged(companyId) {
+      return request.resource.data.inviteId == resource.data.inviteId
+        && request.resource.data.companyId == companyId
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.invitedByUid == resource.data.invitedByUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId);
+      allow create: if isSelf(userId) && request.resource.data.uid == userId;
+      allow update: if isSelf(userId)
+        && request.resource.data.uid == userId
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+          || request.resource.data.role == resource.data.role
+          || profileRoleMatchesMembership(userId)
+        );
+      allow delete: if isSelf(userId);
+
+      match /{legacyCollection}/{docId} {
+        allow read: if isSelf(userId);
+        allow write: if false;
+      }
+    }
+
+    match /companies/{companyId} {
+      allow create: if signedIn()
+        && request.resource.data.companyId == companyId
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow read: if isCompanyMember(companyId);
+      allow update: if canManageCompany(companyId) || isCompanyOwner();
+      allow delete: if hasRole(companyId, ['founder']);
+
+      match /members/{memberId} {
+        allow read: if isCompanyMember(companyId);
+
+        allow create: if signedIn()
+          && request.resource.data.uid == memberId
+          && (
+            (
+              memberId == request.auth.uid
+              && request.resource.data.role == 'founder'
+              && getAfter(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == request.auth.uid
+            )
+            || (
+              memberId == request.auth.uid
+              && request.resource.data.status == 'active'
+              && validInviteForJoin(companyId, request.resource.data.role)
+            )
+          );
+
+        allow update: if canManageCompany(companyId)
+          && resource.data.role != 'founder'
+          && request.resource.data.role != 'founder'
+          && coreMemberFieldsUnchanged()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'updatedAt']);
+
+        allow delete: if canManageCompany(companyId)
+          && resource.data.role != 'founder';
+      }
+
+      match /invites/{inviteId} {
+        allow read: if isCompanyMember(companyId)
+          || (
+            resource.data.status == 'pending'
+            && resource.data.expiresAt > request.time
+          );
+
+        allow create: if canInvite(companyId)
+          && request.resource.data.inviteId == inviteId
+          && request.resource.data.token == inviteId
+          && request.resource.data.companyId == companyId
+          && request.resource.data.invitedByUid == request.auth.uid
+          && request.resource.data.role != 'founder'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.expiresAt > request.time;
+
+        allow update: if (
+            canInvite(companyId)
+            && coreInviteFieldsUnchanged(companyId)
+            && request.resource.data.role != 'founder'
+            && request.resource.data.status == 'revoked'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+          || (
+            signedIn()
+            && coreInviteFieldsUnchanged(companyId)
+            && resource.data.status == 'pending'
+            && resource.data.expiresAt > request.time
+            && request.resource.data.status == 'accepted'
+            && request.resource.data.acceptedByUid == request.auth.uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt', 'acceptedByUid', 'updatedAt'])
+          );
+
+        allow delete: if canInvite(companyId);
+      }
+
+      match /funding/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if canManageFinance(companyId);
+      }
+
+      match /expenses/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if canManageExpenses(companyId);
+      }
+
+      match /startupCosts/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if canManageFinance(companyId);
+      }
+
+      match /recurringCosts/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if canManageExpenses(companyId);
+      }
+
+      match /teamPayments/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if canManageTeamPayments(companyId);
+      }
+
+      match /founderNotes/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if canManageFounderNotes(companyId);
       }
     }
   }
