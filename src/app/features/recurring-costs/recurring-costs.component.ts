@@ -3,10 +3,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { BILLING_CYCLES, RecurringCost, RecurringCostInput } from '../../core/models/recurring-cost.model';
 import { EXPENSE_CATEGORIES } from '../../core/models/expense.model';
+import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
+import { FundingService } from '../../core/services/funding.service';
 import { RecurringCostService } from '../../core/services/recurring-cost.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { booleanValue, numberValue, textValue } from '../../core/utils/feature-form-values';
+import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
 @Component({
@@ -16,7 +19,9 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   templateUrl: './recurring-costs.component.html',
 })
 export class RecurringCostsComponent {
+  private readonly fundingService = inject(FundingService);
   private readonly recurringCostService = inject(RecurringCostService);
+  private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly recurringCosts = toSignal(this.recurringCostService.list(), { initialValue: [] as RecurringCost[] });
 
   errorMessage = '';
@@ -42,6 +47,7 @@ export class RecurringCostsComponent {
         { name: 'amount', label: 'Amount', type: 'number', required: true },
         { name: 'billingCycle', label: 'Billing cycle', type: 'select', required: true, options: BILLING_CYCLES },
         { name: 'category', label: 'Category', type: 'select', required: true, options: EXPENSE_CATEGORIES },
+        { name: 'fundingSourceId', label: 'Funding source used', type: 'select', options: fundingSourceOptions(this.funding()), display: 'cards' },
         { name: 'nextBillingDate', label: 'Next billing date', type: 'date', required: true },
         { name: 'isActive', label: 'Active', type: 'checkbox', placeholder: 'Include in monthly burn' },
         { name: 'notes', label: 'Notes', type: 'textarea', rows: 3 },
@@ -59,7 +65,7 @@ export class RecurringCostsComponent {
     return this.recurringCosts().map((item) => ({
       id: item.id,
       title: item.name,
-      meta: `${item.category} - ${item.billingCycle}`,
+      meta: `${item.category} - ${item.billingCycle} - ${fundingSourceLabel(item)}`,
       status: item.isActive ? 'Active' : 'Inactive',
       amount: currencyINR(item.amount),
       raw: item as unknown as Record<string, unknown>,
@@ -75,6 +81,7 @@ export class RecurringCostsComponent {
       nextBillingDate: textValue(event.value, 'nextBillingDate'),
       isActive: booleanValue(event.value, 'isActive'),
       notes: textValue(event.value, 'notes'),
+      ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
     await this.runMutation(() => event.id ? this.recurringCostService.update(event.id, payload) : this.recurringCostService.create(payload));

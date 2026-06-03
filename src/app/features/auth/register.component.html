@@ -2,7 +2,7 @@
   <nav class="mx-auto mb-5 flex w-full max-w-6xl items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm md:hidden dark:border-slate-800 dark:bg-slate-900/80" aria-label="Authentication navigation">
     <div class="flex items-center gap-2">
       <img src="logo.svg" alt="" class="size-9 rounded-lg">
-      <span class="text-sm font-semibold">Founder finance OS</span>
+      <span class="text-sm font-semibold">Startup Expense OS</span>
     </div>
     <a
       routerLink="/login"
@@ -38,9 +38,9 @@
 
         <div class="mt-8">
           <p class="text-sm font-medium text-teal-700 dark:text-teal-300">Create account</p>
-          <h2 class="mt-2 text-2xl font-semibold">{{ isInviteFlow ? 'Join the company workspace' : 'Start your founder workspace' }}</h2>
+          <h2 class="mt-2 text-2xl font-semibold">{{ isInviteFlow ? 'Join the company workspace' : 'Start your company workspace' }}</h2>
           <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            {{ isInviteFlow ? 'Your company and role come from the invite link.' : 'Founder signup creates the company, profile, and owner member record.' }}
+            {{ isInviteFlow ? 'Your company and role come from the invite link.' : 'First account creates the company, profile, and owner member record.' }}
           </p>
         </div>
 
@@ -59,7 +59,7 @@
                 <p class="mt-1 leading-5">The role is locked by the invite token and cannot be changed here.</p>
               } @else {
                 <p class="font-semibold">Role: {{ roleLabel }}</p>
-                <p class="mt-1 leading-5">Founder is the only role available for normal signup.</p>
+                <p class="mt-1 leading-5">The first workspace account is created as the company owner.</p>
               }
             </div>
           </div>

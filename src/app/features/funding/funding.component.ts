@@ -6,6 +6,7 @@ import { FUNDING_TYPES, Funding, FundingInput } from '../../core/models/funding.
 import { FundingService } from '../../core/services/funding.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
+import { fundingTypeOptions } from '../../core/utils/funding-source-options';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
 @Component({
@@ -27,8 +28,8 @@ export class FundingComponent {
 
     return {
       eyebrow: 'Funding Manager',
-      title: 'Track every source of startup capital',
-      description: 'Record grants, pre-seed checks, founder contributions, revenue, and notes against the funding source.',
+      title: 'Track every source of company capital',
+      description: 'Record grants, investor checks, owner contributions, revenue, credit lines, and notes against the funding source.',
       icon: 'wallet',
       primaryAction: 'Add Funding',
       secondaryAction: 'Realtime',
@@ -39,13 +40,13 @@ export class FundingComponent {
         { name: 'sourceName', label: 'Source name', type: 'text', required: true, placeholder: 'CIBA Pre-seed Funding' },
         { name: 'amount', label: 'Amount', type: 'number', required: true, placeholder: '200000' },
         { name: 'dateReceived', label: 'Date received', type: 'date', required: true },
-        { name: 'type', label: 'Funding type', type: 'select', required: true, options: FUNDING_TYPES },
+        { name: 'type', label: 'Funding type', type: 'select', required: true, options: fundingTypeOptions(FUNDING_TYPES), display: 'cards' },
         { name: 'notes', label: 'Notes', type: 'textarea', rows: 3, placeholder: 'Context, terms, or milestone notes' },
       ],
       stats: [
         { label: 'Total Funding', value: currencyINR(totalFunding), detail: `${records.length} funding source${records.length === 1 ? '' : 's'}`, icon: 'banknote', tone: 'teal' },
         { label: 'Largest Source', value: currencyINR(Math.max(...records.map((item) => item.amount), 0)), detail: 'Highest capital line', icon: 'wallet', tone: 'emerald' },
-        { label: 'Funding Events', value: String(records.length), detail: 'Stored under current UID', icon: 'database', tone: 'sky' },
+        { label: 'Funding Events', value: String(records.length), detail: 'Stored under company workspace', icon: 'database', tone: 'sky' },
       ],
       rows: [],
     };

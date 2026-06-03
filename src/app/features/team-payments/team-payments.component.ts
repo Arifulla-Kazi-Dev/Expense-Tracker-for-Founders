@@ -2,11 +2,14 @@ import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { PAYMENT_STATUSES } from '../../core/models/expense.model';
+import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { TEAM_COMPENSATION_TYPES, TEAM_PAYMENT_TYPES, TeamPayment, TeamPaymentInput } from '../../core/models/team-payment.model';
+import { FundingService } from '../../core/services/funding.service';
 import { TeamPaymentService } from '../../core/services/team-payment.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
+import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
 @Component({
@@ -16,7 +19,9 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   templateUrl: './team-payments.component.html',
 })
 export class TeamPaymentsComponent {
+  private readonly fundingService = inject(FundingService);
   private readonly teamPaymentService = inject(TeamPaymentService);
+  private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly teamPayments = toSignal(this.teamPaymentService.list(), { initialValue: [] as TeamPayment[] });
 
   errorMessage = '';
@@ -44,6 +49,7 @@ export class TeamPaymentsComponent {
         { name: 'role', label: 'Role', type: 'text', required: true, placeholder: 'Product QA Intern' },
         { name: 'type', label: 'Type', type: 'select', required: true, options: TEAM_PAYMENT_TYPES },
         { name: 'paymentType', label: 'Payment type', type: 'select', required: true, options: TEAM_COMPENSATION_TYPES },
+        { name: 'fundingSourceId', label: 'Funding source used', type: 'select', options: fundingSourceOptions(this.funding()), display: 'cards' },
         { name: 'month', label: 'Month', type: 'month', required: true },
         { name: 'monthlyAmount', label: 'Monthly amount', type: 'number', requiredWhen: { field: 'paymentType', value: 'Paid' } },
         { name: 'paidAmount', label: 'Paid amount', type: 'number', requiredWhen: { field: 'paymentType', value: 'Paid' } },
@@ -71,7 +77,7 @@ export class TeamPaymentsComponent {
     return this.teamPayments().map((item) => ({
       id: item.id,
       title: this.paymentType(item) === 'Unpaid' ? `${item.personName} contributor` : `${item.personName} payment`,
-      meta: `${item.role} - ${item.type} - ${item.month}`,
+      meta: `${item.role} - ${item.type} - ${item.month} - ${fundingSourceLabel(item)}`,
       status: this.paymentType(item) === 'Unpaid' ? 'Active' : item.paymentStatus,
       amount: this.paymentType(item) === 'Unpaid' ? 'Unpaid' : currencyINR(item.monthlyAmount),
       raw: item as unknown as Record<string, unknown>,
@@ -95,6 +101,7 @@ export class TeamPaymentsComponent {
       paymentStatus: isUnpaid ? 'Paid' : textValue(event.value, 'paymentStatus') as TeamPaymentInput['paymentStatus'],
       paymentDate: isUnpaid ? '' : textValue(event.value, 'paymentDate'),
       notes: textValue(event.value, 'notes'),
+      ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
     await this.runMutation(() => event.id ? this.teamPaymentService.update(event.id, payload) : this.teamPaymentService.create(payload));

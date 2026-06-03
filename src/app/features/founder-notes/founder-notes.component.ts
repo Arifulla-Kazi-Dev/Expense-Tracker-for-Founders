@@ -25,13 +25,13 @@ export class FounderNotesComponent {
     const highPriority = records.filter((item) => item.priority === 'High').length;
 
     return {
-      eyebrow: 'Founder Notes',
+      eyebrow: 'Workspace Notes',
       title: 'Keep decision quality close to spending',
       description: 'Record why an expense was made, expected benefit, priority, ROI expectation, and follow-up notes.',
       icon: 'notebook-text',
       primaryAction: 'Add Note',
       secondaryAction: 'Realtime',
-      formTitle: 'Add founder note',
+      formTitle: 'Add workspace note',
       emptyTitle: 'No decision notes yet',
       emptyDescription: 'Capture the reasoning behind important finance decisions and revisit ROI later.',
       fields: [
@@ -45,7 +45,7 @@ export class FounderNotesComponent {
         { name: 'notes', label: 'Notes', type: 'textarea', rows: 3 },
       ],
       stats: [
-        { label: 'Decision Notes', value: String(records.length), detail: 'Founder decisions logged', icon: 'notebook-text', tone: 'teal' },
+        { label: 'Decision Notes', value: String(records.length), detail: 'Workspace decisions logged', icon: 'notebook-text', tone: 'teal' },
         { label: 'High Priority', value: String(highPriority), detail: 'Needs close review', icon: 'alert-circle', tone: highPriority > 0 ? 'rose' : 'emerald' },
         { label: 'ROI Reviews', value: String(records.filter((item) => item.roiExpectation).length), detail: 'With ROI expectation', icon: 'target', tone: 'sky' },
       ],
@@ -95,7 +95,7 @@ export class FounderNotesComponent {
     try {
       await action();
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Unable to save founder note.';
+      this.errorMessage = error instanceof Error ? error.message : 'Unable to save workspace note.';
     } finally {
       this.isBusy = false;
     }

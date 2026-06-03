@@ -93,14 +93,23 @@ export interface FeaturePageRow {
 
 export type FeatureFieldType = 'checkbox' | 'date' | 'month' | 'number' | 'select' | 'textarea' | 'text';
 
+export interface FeatureFormOption {
+  value: string;
+  label: string;
+  detail?: string;
+  icon?: string;
+  tone?: Tone;
+}
+
 export interface FeatureFormField {
   name: string;
   label: string;
   type: FeatureFieldType;
-  options?: readonly string[];
+  options?: readonly (string | FeatureFormOption)[];
   placeholder?: string;
   required?: boolean;
   readonly?: boolean;
+  display?: 'cards' | 'select';
   requiredWhen?: {
     field: string;
     value: string | number | boolean;

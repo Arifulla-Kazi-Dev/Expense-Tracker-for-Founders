@@ -85,7 +85,7 @@ export class ReportsComponent {
     const topCategory = this.topCategory();
 
     if (!summary.hasData) {
-      return 'No live finance records are available yet. Add funding and expenses to generate founder-ready insights.';
+      return 'No live finance records are available yet. Add funding and expenses to generate company-ready insights.';
     }
 
     if (summary.monthlyBurn <= 0) {
@@ -166,7 +166,7 @@ export class ReportsComponent {
     }
 
     if (summary.estimatedRunway < 6) {
-      return 'Runway is below the founder safety floor.';
+      return 'Runway is below the company safety floor.';
     }
 
     if (summary.estimatedRunway < 12) {

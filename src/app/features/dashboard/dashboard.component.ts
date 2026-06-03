@@ -134,7 +134,7 @@ export class DashboardComponent implements OnDestroy {
     if (summary.totalPending > 0) {
       alerts.push({
         title: 'Pending payments need attention',
-        detail: `${currencyINR(summary.totalPending)} is still open across the founder ledger.`,
+        detail: `${currencyINR(summary.totalPending)} is still open across the company ledger.`,
         icon: 'calendar-clock',
         tone: 'amber',
         actionLabel: 'Open expenses',
@@ -145,7 +145,7 @@ export class DashboardComponent implements OnDestroy {
     if (summary.remainingBalance > 0 && summary.estimatedRunway >= 6) {
       alerts.push({
         title: 'Cash runway looks healthy',
-        detail: 'Available cash remains above the founder safety threshold.',
+        detail: 'Available cash remains above the company safety threshold.',
         icon: 'check-circle-2',
         tone: 'emerald',
       });
@@ -167,7 +167,7 @@ export class DashboardComponent implements OnDestroy {
     const summary = this.summary();
 
     if (!summary.hasData) {
-      return 'Add funding and monthly costs to calculate founder runway.';
+      return 'Add funding and monthly costs to calculate company runway.';
     }
 
     if (!summary.canCalculateRunway) {
@@ -209,7 +209,7 @@ export class DashboardComponent implements OnDestroy {
     const summary = this.summary();
 
     if (!summary.hasData) {
-      return 'Connect the first funding and expense records to turn this into a live founder operating view.';
+      return 'Connect the first funding and expense records to turn this into a live company operating view.';
     }
 
     if (!summary.canCalculateRunway) {
@@ -285,7 +285,7 @@ export class DashboardComponent implements OnDestroy {
       return 'Needs attention';
     }
 
-    return 'Founder review needed';
+    return 'Workspace review needed';
   }
 
   runwayGauge(): number {
@@ -384,7 +384,7 @@ export class DashboardComponent implements OnDestroy {
       summary.decisionNotes.length > 0,
     ].filter(Boolean).length;
 
-    return `${activeAreas} of 4 operating areas have live records: funding, spend, team, and founder notes.`;
+    return `${activeAreas} of 4 operating areas have live records: funding, spend, team, and workspace notes.`;
   }
 
   nextBestAction(): { label: string; detail: string; route: string; icon: string } {

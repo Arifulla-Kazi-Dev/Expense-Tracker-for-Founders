@@ -19,7 +19,7 @@ describe('AppComponent', () => {
   it(`should have the product title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('Expense Tracker for Founders');
+    expect(app.title).toEqual('Startup Expense OS');
   });
 
   it('should render a routed application shell host', () => {

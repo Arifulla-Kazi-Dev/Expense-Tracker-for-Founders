@@ -4,8 +4,9 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { LucideDynamicIcon } from '@lucide/angular';
 import { Subscription } from 'rxjs';
 
-import { FeatureFormField, FeaturePageConfig, FeaturePageRow, Tone } from '../../../core/models/dashboard.models';
+import { FeatureFormField, FeatureFormOption, FeaturePageConfig, FeaturePageRow, Tone } from '../../../core/models/dashboard.models';
 import { badgeClass, tonePanelClass } from '../../../core/utils/ui-classnames';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 export type FeatureFormValue = string | number | boolean;
 
@@ -17,7 +18,7 @@ export interface FeatureSaveEvent {
 @Component({
   selector: 'app-feature-page',
   standalone: true,
-  imports: [CommonModule, LucideDynamicIcon, ReactiveFormsModule],
+  imports: [CommonModule, ConfirmDialogComponent, LucideDynamicIcon, ReactiveFormsModule],
   templateUrl: './feature-page.component.html',
   styleUrl: './feature-page.component.css',
 })
@@ -33,6 +34,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
 
   form = new FormGroup<Record<string, FormControl<FeatureFormValue>>>({});
   editingRow: FeaturePageRow | null = null;
+  pendingDeleteRow: FeaturePageRow | null = null;
   isModalOpen = false;
   private fieldSignature = '';
   private formBehaviorSubscription?: Subscription;
@@ -97,16 +99,27 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     this.closeModal();
   }
 
-  confirmDelete(row: FeaturePageRow): void {
+  requestDelete(row: FeaturePageRow): void {
     if (!row.id || this.isBusy) {
       return;
     }
 
-    const shouldDelete = window.confirm(`Delete "${row.title}"? This cannot be undone.`);
+    this.pendingDeleteRow = row;
+  }
 
-    if (shouldDelete) {
-      this.deleteRecord.emit(row.id);
+  cancelDelete(): void {
+    this.pendingDeleteRow = null;
+  }
+
+  confirmDelete(): void {
+    const row = this.pendingDeleteRow;
+
+    if (!row?.id || this.isBusy) {
+      return;
     }
+
+    this.deleteRecord.emit(row.id);
+    this.pendingDeleteRow = null;
   }
 
   isInvalid(field: FeatureFormField): boolean {
@@ -122,23 +135,27 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     return field.type === 'select' && field.name.toLowerCase().includes('category');
   }
 
-  isSelectedOption(field: FeatureFormField, option: string): boolean {
-    return this.form.controls[field.name]?.value === option;
+  isCardSelectField(field: FeatureFormField): boolean {
+    return field.type === 'select' && (field.display === 'cards' || this.isCategoryField(field));
   }
 
-  selectOption(field: FeatureFormField, option: string): void {
+  isSelectedOption(field: FeatureFormField, option: string | FeatureFormOption): boolean {
+    return this.form.controls[field.name]?.value === this.optionValue(option);
+  }
+
+  selectOption(field: FeatureFormField, option: string | FeatureFormOption): void {
     const control = this.form.controls[field.name];
 
     if (!control || this.isBusy) {
       return;
     }
 
-    control.setValue(option);
+    control.setValue(this.optionValue(option));
     control.markAsDirty();
     control.markAsTouched();
   }
 
-  categoryOptionClass(field: FeatureFormField, option: string): string {
+  optionClass(field: FeatureFormField, option: string | FeatureFormOption): string {
     if (this.isSelectedOption(field, option)) {
       return 'border-teal-300 bg-teal-50 text-teal-950 ring-2 ring-teal-500/20 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-100';
     }
@@ -146,8 +163,24 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     return 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800';
   }
 
-  categoryOptionIcon(option: string): string {
-    const value = option.toLowerCase();
+  optionValue(option: string | FeatureFormOption): string {
+    return typeof option === 'string' ? option : option.value;
+  }
+
+  optionLabel(option: string | FeatureFormOption): string {
+    return typeof option === 'string' ? option : option.label;
+  }
+
+  optionDetail(option: string | FeatureFormOption): string {
+    return typeof option === 'string' ? '' : option.detail ?? '';
+  }
+
+  optionIcon(option: string | FeatureFormOption): string {
+    if (typeof option !== 'string' && option.icon) {
+      return option.icon;
+    }
+
+    const value = this.optionLabel(option).toLowerCase();
 
     if (value.includes('legal') || value.includes('company') || value.includes('startup')) {
       return 'building-2';
@@ -166,6 +199,11 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     }
 
     return 'layers-3';
+  }
+
+  optionToneClass(option: string | FeatureFormOption): string {
+    const tone = typeof option === 'string' ? 'slate' : option.tone ?? 'slate';
+    return tonePanelClass(tone);
   }
 
   tonePanelClass(tone: Tone): string {
@@ -199,7 +237,8 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
           field.required ? 'required' : 'optional',
           field.requiredWhen ? `${field.requiredWhen.field}=${field.requiredWhen.value}` : '',
           field.readonly ? 'readonly' : '',
-          field.options?.join('|') ?? '',
+          field.display ?? '',
+          field.options?.map((option) => this.optionSignature(option)).join('|') ?? '',
         ].join(':'),
       )
       .join(';');
@@ -258,7 +297,13 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
       return true;
     }
 
-    return field.options?.[0] ?? '';
+    return field.options?.[0] ? this.optionValue(field.options[0]) : '';
+  }
+
+  private optionSignature(option: string | FeatureFormOption): string {
+    return typeof option === 'string'
+      ? option
+      : `${option.value}:${option.label}:${option.detail ?? ''}:${option.icon ?? ''}:${option.tone ?? ''}`;
   }
 
   private setupFormBehaviors(): void {

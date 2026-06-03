@@ -2,11 +2,14 @@ import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { PAYMENT_STATUSES } from '../../core/models/expense.model';
+import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { StartupCost, StartupCostInput } from '../../core/models/startup-cost.model';
+import { FundingService } from '../../core/services/funding.service';
 import { StartupCostService } from '../../core/services/startup-cost.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
+import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
 @Component({
@@ -16,7 +19,9 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   templateUrl: './startup-costs.component.html',
 })
 export class StartupCostsComponent {
+  private readonly fundingService = inject(FundingService);
   private readonly startupCostService = inject(StartupCostService);
+  private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly startupCosts = toSignal(this.startupCostService.list(), { initialValue: [] as StartupCost[] });
 
   errorMessage = '';
@@ -42,6 +47,7 @@ export class StartupCostsComponent {
         { name: 'costName', label: 'Cost name', type: 'text', required: true, placeholder: 'Company registration' },
         { name: 'amount', label: 'Amount', type: 'number', required: true },
         { name: 'paymentStatus', label: 'Payment status', type: 'select', required: true, options: PAYMENT_STATUSES },
+        { name: 'fundingSourceId', label: 'Funding source used', type: 'select', options: fundingSourceOptions(this.funding()), display: 'cards' },
         { name: 'date', label: 'Date', type: 'date', required: true },
         { name: 'paidAmount', label: 'Paid amount', type: 'number', required: true },
         { name: 'pendingAmount', label: 'Pending amount', type: 'number', required: true },
@@ -60,7 +66,7 @@ export class StartupCostsComponent {
     return this.startupCosts().map((item) => ({
       id: item.id,
       title: item.costName,
-      meta: `Startup setup - ${item.date || 'Date not set'}`,
+      meta: `Startup setup - ${item.date || 'Date not set'} - ${fundingSourceLabel(item)}`,
       status: item.paymentStatus,
       amount: currencyINR(item.amount),
       raw: item as unknown as Record<string, unknown>,
@@ -78,6 +84,7 @@ export class StartupCostsComponent {
       paidAmount,
       pendingAmount: numberValue(event.value, 'pendingAmount') || Math.max(amount - paidAmount, 0),
       notes: textValue(event.value, 'notes'),
+      ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
     await this.runMutation(() => event.id ? this.startupCostService.update(event.id, payload) : this.startupCostService.create(payload));

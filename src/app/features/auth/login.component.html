@@ -2,7 +2,7 @@
   <nav class="mx-auto mb-5 flex w-full max-w-6xl items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm md:hidden dark:border-slate-800 dark:bg-slate-900/80" aria-label="Authentication navigation">
     <div class="flex items-center gap-2">
       <img src="logo.svg" alt="" class="size-9 rounded-lg">
-      <span class="text-sm font-semibold">Founder finance OS</span>
+      <span class="text-sm font-semibold">Startup Expense OS</span>
     </div>
     <a
       routerLink="/register"
@@ -17,13 +17,13 @@
       <div class="hidden border-r border-slate-200 bg-slate-950 p-8 text-white md:flex md:flex-col md:justify-between dark:border-slate-800">
         <div>
           <img src="logo.svg" alt="" class="size-12 rounded-lg">
-          <h1 class="mt-8 text-3xl font-semibold">Expense Tracker for Founders</h1>
+          <h1 class="mt-8 text-3xl font-semibold">Startup Expense OS</h1>
           <p class="mt-4 text-sm leading-6 text-slate-300">
-            Secure founder finance workspace with private Firestore ledgers, runway visibility, and controlled spend.
+            Secure company finance workspace with private Firestore ledgers, runway visibility, team roles, and controlled spend.
           </p>
         </div>
         <div class="rounded-lg border border-white/10 bg-white/5 p-4">
-          <p class="text-sm font-semibold">Founder runway command center</p>
+          <p class="text-sm font-semibold">Company runway command center</p>
           <p class="mt-2 text-sm leading-6 text-slate-300">Funding, burn, expenses, and notes stay scoped to your active company workspace.</p>
         </div>
       </div>
@@ -112,7 +112,7 @@
         <p class="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           New here?
           <a routerLink="/register" [queryParams]="isInviteFlow ? { inviteToken } : null" class="font-semibold text-slate-950 hover:text-teal-700 dark:text-white dark:hover:text-teal-300">
-            {{ isInviteFlow ? 'Create account from invite' : 'Create founder account' }}
+            {{ isInviteFlow ? 'Create account from invite' : 'Create company account' }}
           </a>
         </p>
       </div>

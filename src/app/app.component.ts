@@ -9,5 +9,5 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.component.css',
 })
 export class AppComponent {
-  readonly title = 'Expense Tracker for Founders';
+  readonly title = 'Startup Expense OS';
 }

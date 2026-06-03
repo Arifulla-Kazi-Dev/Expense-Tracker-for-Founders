@@ -19,7 +19,7 @@ import { PermissionService } from '../../core/services/permission.service';
   styleUrl: './app-shell.component.css',
 })
 export class AppShellComponent implements OnInit, OnDestroy {
-  readonly title = 'Expense Tracker for Founders';
+  readonly title = 'Startup Expense OS';
   readonly navigationItems = navigationItems;
   readonly mobileNavigationItems = mobileNavigationItems;
   readonly currentDateLabel = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date());
@@ -111,7 +111,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
     try {
       await this.authService.retryCurrentUserProfileSync();
-      this.showToast('Founder profile synced to Firestore');
+      this.showToast('Profile synced to Firestore');
     } catch (error) {
       this.showToast(error instanceof Error ? error.message : 'Unable to sync profile');
     } finally {
@@ -120,7 +120,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   }
 
   initials(): string {
-    const name = this.profile()?.name ?? 'Founder';
+    const name = this.profile()?.name ?? 'Member';
     return name
       .split(' ')
       .filter(Boolean)

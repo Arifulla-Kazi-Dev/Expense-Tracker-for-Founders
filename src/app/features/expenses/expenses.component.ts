@@ -2,10 +2,13 @@ import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { EXPENSE_CATEGORIES, EXPENSE_TYPES, Expense, ExpenseInput, PAYMENT_STATUSES } from '../../core/models/expense.model';
+import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { ExpenseService } from '../../core/services/expense.service';
+import { FundingService } from '../../core/services/funding.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
+import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
 @Component({
@@ -16,7 +19,9 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 })
 export class ExpensesComponent {
   private readonly expenseService = inject(ExpenseService);
+  private readonly fundingService = inject(FundingService);
   private readonly expenses = toSignal(this.expenseService.list(), { initialValue: [] as Expense[] });
+  private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
 
   errorMessage = '';
   isBusy = false;
@@ -30,7 +35,7 @@ export class ExpensesComponent {
     return {
       eyebrow: 'Expense Manager',
       title: 'Control paid, pending, and recurring expenses',
-      description: 'Classify every expense by priority, category, due date, paid amount, and founder decision note.',
+      description: 'Classify every expense by category, due date, paid amount, funding source, and workspace decision note.',
       icon: 'receipt-text',
       primaryAction: 'Add Expense',
       secondaryAction: 'Realtime',
@@ -43,6 +48,7 @@ export class ExpensesComponent {
         { name: 'category', label: 'Category', type: 'select', required: true, options: EXPENSE_CATEGORIES },
         { name: 'paymentStatus', label: 'Payment status', type: 'select', required: true, options: PAYMENT_STATUSES },
         { name: 'expenseType', label: 'Expense type', type: 'select', required: true, options: EXPENSE_TYPES },
+        { name: 'fundingSourceId', label: 'Funding source used', type: 'select', options: fundingSourceOptions(this.funding()), display: 'cards' },
         { name: 'date', label: 'Expense date', type: 'date', required: true },
         { name: 'dueDate', label: 'Due date', type: 'date', requiredWhen: { field: 'expenseType', value: 'Recurring' } },
         { name: 'paidAmount', label: 'Paid amount', type: 'number', required: true },
@@ -62,7 +68,7 @@ export class ExpensesComponent {
     return this.expenses().map((item) => ({
       id: item.id,
       title: item.title,
-      meta: item.dueDate ? `${item.category} - Due ${item.dueDate}` : `${item.category} - ${item.date || 'No due date'}`,
+      meta: `${item.dueDate ? `${item.category} - Due ${item.dueDate}` : `${item.category} - ${item.date || 'No due date'}`} - ${fundingSourceLabel(item)}`,
       status: item.paymentStatus,
       amount: currencyINR(item.amount),
       raw: item as unknown as Record<string, unknown>,
@@ -84,6 +90,7 @@ export class ExpensesComponent {
       paidAmount,
       pendingAmount,
       notes: textValue(event.value, 'notes'),
+      ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
     await this.runMutation(() => event.id ? this.expenseService.update(event.id, payload) : this.expenseService.create(payload));

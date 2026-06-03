@@ -7,7 +7,7 @@
         <img src="logo.svg" alt="" class="size-11 rounded-lg shadow-sm">
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold">{{ title }}</p>
-          <p class="text-xs text-slate-400">Founder finance OS</p>
+          <p class="text-xs text-slate-400">Company finance workspace</p>
         </div>
       </div>
     </div>
@@ -63,7 +63,7 @@
         <img src="logo.svg" alt="" class="size-11 rounded-lg shadow-sm">
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold">{{ title }}</p>
-          <p class="text-xs text-slate-400">Founder finance OS</p>
+          <p class="text-xs text-slate-400">Company finance workspace</p>
         </div>
       </div>
       <button
@@ -99,7 +99,7 @@
       >
         <div class="flex size-10 items-center justify-center rounded-full bg-teal-500 text-sm font-semibold text-slate-950">{{ initials() }}</div>
         <div class="min-w-0">
-          <p class="truncate text-sm font-semibold">{{ profile()?.name || 'Founder' }}</p>
+          <p class="truncate text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
           <p class="truncate text-xs text-slate-400">{{ roleLabel() }}</p>
         </div>
       </a>
@@ -129,7 +129,7 @@
 
         <div class="min-w-0 flex-1">
           <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ currentDateLabel }}</p>
-          <h1 class="truncate text-lg font-semibold sm:text-xl">Founder Dashboard</h1>
+          <h1 class="truncate text-lg font-semibold sm:text-xl">Company Dashboard</h1>
         </div>
 
         <div class="hidden min-w-72 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:flex dark:border-slate-800 dark:bg-slate-900">
@@ -172,7 +172,7 @@
         <div class="hidden items-center gap-3 border-l border-slate-200 pl-4 sm:flex dark:border-slate-800">
           <a routerLink="/profile" class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white dark:hover:bg-slate-900" aria-label="Open profile">
             <div class="text-right">
-              <p class="text-sm font-semibold">{{ profile()?.name || 'Founder' }}</p>
+              <p class="text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
               <p class="text-xs text-slate-500 dark:text-slate-400">{{ profile()?.companyName || roleLabel() }}</p>
             </div>
             <div class="flex size-10 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">{{ initials() }}</div>

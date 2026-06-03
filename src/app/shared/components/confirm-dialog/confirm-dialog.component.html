@@ -1,0 +1,54 @@
+<div
+  class="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:items-center"
+  role="presentation"
+  (click)="onBackdropClick($event)"
+>
+  <section
+    class="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title"
+  >
+    <div class="flex items-start gap-4">
+      <div class="rounded-lg p-2 ring-1" [ngClass]="toneClass()">
+        <svg [lucideIcon]="icon" class="size-5"></svg>
+      </div>
+      <div class="min-w-0 flex-1">
+        <h2 class="text-lg font-semibold text-slate-950 dark:text-white">{{ title }}</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ message }}</p>
+      </div>
+      <button
+        type="button"
+        class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+        aria-label="Close dialog"
+        [disabled]="isBusy"
+        (click)="cancel.emit()"
+      >
+        <svg lucideIcon="x" class="size-4"></svg>
+      </button>
+    </div>
+
+    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+        [disabled]="isBusy"
+        (click)="cancel.emit()"
+      >
+        {{ cancelLabel }}
+      </button>
+      <button
+        type="button"
+        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+        [ngClass]="confirmButtonClass()"
+        [disabled]="isBusy"
+        (click)="confirm.emit()"
+      >
+        @if (isBusy) {
+          <svg lucideIcon="loader-circle" class="size-4 animate-spin"></svg>
+        }
+        {{ confirmLabel }}
+      </button>
+    </div>
+  </section>
+</div>

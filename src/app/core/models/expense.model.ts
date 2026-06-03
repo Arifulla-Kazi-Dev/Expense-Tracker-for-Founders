@@ -1,4 +1,5 @@
 import type { FirestoreDate } from './user-profile.model';
+import type { FundingSourceAttribution } from './funding.model';
 
 export type PaymentStatus = 'Paid' | 'Pending' | 'Partially Paid';
 export type ExpenseType = 'One-Time' | 'Recurring';
@@ -26,7 +27,7 @@ export const EXPENSE_CATEGORIES = [
 
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
-export interface Expense {
+export interface Expense extends FundingSourceAttribution {
   id: string;
   uid: string;
   title: string;

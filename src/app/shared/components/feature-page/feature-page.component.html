@@ -113,7 +113,7 @@
                   type="button"
                   class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-400/10 dark:hover:text-rose-200"
                   aria-label="Delete record"
-                  (click)="confirmDelete(row)"
+                  (click)="requestDelete(row)"
                 >
                   <svg lucideIcon="trash-2" class="size-4"></svg>
                 </button>
@@ -177,7 +177,7 @@
       <form class="mt-5 grid max-h-[70vh] gap-4 overflow-y-auto pr-1" [formGroup]="form" (ngSubmit)="submitForm()">
         <div class="grid gap-4 sm:grid-cols-2">
           @for (field of fields; track field.name) {
-            <div class="grid gap-2 text-sm font-medium" [ngClass]="{ 'sm:col-span-2': field.type === 'textarea' || field.type === 'checkbox' || isCategoryField(field) }">
+            <div class="grid gap-2 text-sm font-medium" [ngClass]="{ 'sm:col-span-2': field.type === 'textarea' || field.type === 'checkbox' || isCardSelectField(field) }">
               <label [attr.for]="field.name" class="flex items-center justify-between gap-2">
                 <span>{{ field.label }}</span>
                 @if (!isRequired(field)) {
@@ -186,19 +186,26 @@
               </label>
 
               @if (field.type === 'select') {
-                @if (isCategoryField(field)) {
+                @if (isCardSelectField(field)) {
                   <div class="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950 sm:grid-cols-2" role="radiogroup" [attr.aria-label]="field.label">
                     @for (option of field.options ?? []; track option) {
                       <button
                         type="button"
-                        class="flex min-h-11 items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm font-semibold transition"
-                        [ngClass]="categoryOptionClass(field, option)"
+                        class="flex min-h-12 items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition"
+                        [ngClass]="optionClass(field, option)"
                         [attr.aria-pressed]="isSelectedOption(field, option)"
                         (click)="selectOption(field, option)"
                       >
                         <span class="flex min-w-0 items-center gap-2">
-                          <svg [lucideIcon]="categoryOptionIcon(option)" class="size-4 shrink-0"></svg>
-                          <span class="truncate">{{ option }}</span>
+                          <span class="flex size-8 shrink-0 items-center justify-center rounded-md ring-1" [ngClass]="optionToneClass(option)">
+                            <svg [lucideIcon]="optionIcon(option)" class="size-4"></svg>
+                          </span>
+                          <span class="min-w-0">
+                            <span class="block truncate">{{ optionLabel(option) }}</span>
+                            @if (optionDetail(option)) {
+                              <span class="mt-0.5 block truncate text-xs font-medium opacity-70">{{ optionDetail(option) }}</span>
+                            }
+                          </span>
                         </span>
                         @if (isSelectedOption(field, option)) {
                           <svg lucideIcon="check-circle-2" class="size-4 shrink-0"></svg>
@@ -213,7 +220,7 @@
                     class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900"
                   >
                     @for (option of field.options ?? []; track option) {
-                      <option [value]="option">{{ option }}</option>
+                      <option [value]="optionValue(option)">{{ optionLabel(option) }}</option>
                     }
                   </select>
                 }
@@ -272,4 +279,17 @@
       </form>
     </section>
   </div>
+}
+
+@if (pendingDeleteRow) {
+  <app-confirm-dialog
+    title="Delete record"
+    [message]="'Delete ' + pendingDeleteRow.title + '? This removes the record from the company ledger.'"
+    confirmLabel="Delete"
+    icon="trash-2"
+    tone="danger"
+    [isBusy]="isBusy"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()"
+  />
 }

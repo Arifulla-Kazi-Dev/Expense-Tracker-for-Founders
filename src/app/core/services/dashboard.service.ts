@@ -271,7 +271,7 @@ export class DashboardService {
       {
         label: 'Total Paid',
         value: currencyINR(totalPaid),
-        detail: 'Cleared from founder ledger',
+        detail: 'Cleared from company ledger',
         icon: 'check-circle-2',
         tone: 'emerald',
         change: 'Live',

@@ -58,7 +58,7 @@ export const founderMetrics: FounderMetric[] = [
   {
     label: 'Active Team Members',
     value: '5',
-    detail: 'Founder, interns, advisors',
+    detail: 'Owners, interns, advisors',
     icon: 'users',
     tone: 'slate',
     progress: 62,
@@ -85,7 +85,7 @@ export const kpiMetrics: KpiMetric[] = [
   {
     label: 'Total Paid',
     value: currencyINR(95500),
-    detail: 'Cleared from founder ledger',
+    detail: 'Cleared from company ledger',
     icon: 'check-circle-2',
     tone: 'emerald',
     change: '+12.4%',
@@ -139,7 +139,7 @@ export const ledgerPayments: LedgerPayment[] = [
     due: 'Jun 05',
   },
   {
-    title: 'Founder legal agreement',
+    title: 'Owner legal agreement',
     owner: 'Compliance partner',
     category: 'Legal & Compliance',
     status: 'Partially Paid',
@@ -206,7 +206,7 @@ export const featurePages: Record<string, FeaturePageConfig> = {
   funding: {
     eyebrow: 'Funding Manager',
     title: 'Track every source of startup capital',
-    description: 'Record grants, pre-seed checks, founder contributions, revenue, and notes against the funding source.',
+    description: 'Record grants, pre-seed checks, owner contributions, revenue, and notes against the funding source.',
     icon: 'wallet',
     primaryAction: 'Add Funding',
     secondaryAction: 'Export Sources',
@@ -217,13 +217,13 @@ export const featurePages: Record<string, FeaturePageConfig> = {
     ],
     rows: [
       { title: 'CIBA Pre-seed Funding', meta: 'Grant · Received Jun 2026', status: 'Active', amount: currencyINR(200000) },
-      { title: 'Founder contribution placeholder', meta: 'Personal · Draft', status: 'Draft', amount: currencyINR(0) },
+      { title: 'Owner contribution placeholder', meta: 'Personal · Draft', status: 'Draft', amount: currencyINR(0) },
     ],
   },
   expenses: {
     eyebrow: 'Expense Manager',
     title: 'Control paid, pending, and recurring expenses',
-    description: 'Classify every expense by priority, category, due date, paid amount, and founder decision note.',
+    description: 'Classify every expense by priority, category, due date, paid amount, and workspace decision note.',
     icon: 'receipt-text',
     primaryAction: 'Add Expense',
     secondaryAction: 'Export CSV',
@@ -233,7 +233,7 @@ export const featurePages: Record<string, FeaturePageConfig> = {
       { label: 'Categories', value: '12', detail: 'Tracked spend groups', icon: 'layers-3', tone: 'sky' },
     ],
     rows: [
-      { title: 'Founder legal agreement', meta: 'Legal & Compliance · Due Jun 08', status: 'Partially Paid', amount: currencyINR(22500) },
+      { title: 'Owner legal agreement', meta: 'Legal & Compliance · Due Jun 08', status: 'Partially Paid', amount: currencyINR(22500) },
       { title: 'Codex plan', meta: 'AI Tools · Jun subscription', status: 'Paid', amount: currencyINR(2000) },
       { title: 'Trademark search', meta: 'Startup Costs · Due Jun 18', status: 'Pending', amount: currencyINR(6500) },
     ],
@@ -270,7 +270,7 @@ export const featurePages: Record<string, FeaturePageConfig> = {
     rows: [
       { title: 'Company registration', meta: 'Compliance setup · Paid', status: 'Paid', amount: currencyINR(12000) },
       { title: 'Trademark search', meta: 'Legal vendor · Due Jun 18', status: 'Pending', amount: currencyINR(6500) },
-      { title: 'Valuation support', meta: 'Founder documentation', status: 'Partially Paid', amount: currencyINR(9000) },
+      { title: 'Valuation support', meta: 'Owner documentation', status: 'Partially Paid', amount: currencyINR(9000) },
     ],
   },
   recurringCosts: {
@@ -309,7 +309,7 @@ export const featurePages: Record<string, FeaturePageConfig> = {
     ],
   },
   founderNotes: {
-    eyebrow: 'Founder Notes',
+    eyebrow: 'Workspace Notes',
     title: 'Keep decision quality close to spending',
     description: 'Record why an expense was made, expected benefit, priority, ROI expectation, and follow-up notes.',
     icon: 'notebook-text',
@@ -330,17 +330,17 @@ export const featurePages: Record<string, FeaturePageConfig> = {
   settings: {
     eyebrow: 'Settings',
     title: 'Control profile, theme, demo data, and exports',
-    description: 'Manage founder profile, import/export, demo data loading, and future Firebase storage preferences.',
+    description: 'Manage workspace profile, import/export, demo data loading, and future Firebase storage preferences.',
     icon: 'settings',
     primaryAction: 'Load Demo Data',
     secondaryAction: 'Export JSON',
     stats: [
       { label: 'Theme', value: 'System', detail: 'Stored locally', icon: 'settings', tone: 'slate' },
       { label: 'Demo Data', value: 'Ready', detail: currencyINR(200000), icon: 'upload', tone: 'teal' },
-      { label: 'Exports', value: 'JSON/CSV', detail: 'Founder ledger', icon: 'download', tone: 'sky' },
+      { label: 'Exports', value: 'JSON/CSV', detail: 'Company ledger', icon: 'download', tone: 'sky' },
     ],
     rows: [
-      { title: 'Load demo data', meta: 'Creates founder finance sample ledger', status: 'Ready', amount: currencyINR(200000) },
+      { title: 'Load demo data', meta: 'Creates company finance sample ledger', status: 'Ready', amount: currencyINR(200000) },
       { title: 'Reset all data', meta: 'Requires confirmation in Firebase implementation', status: 'Draft', amount: 'Protected' },
     ],
   },

@@ -1,10 +1,11 @@
 import type { FirestoreDate } from './user-profile.model';
+import type { FundingSourceAttribution } from './funding.model';
 
 export type BillingCycle = 'Monthly' | 'Quarterly' | 'Yearly';
 
 export const BILLING_CYCLES: BillingCycle[] = ['Monthly', 'Quarterly', 'Yearly'];
 
-export interface RecurringCost {
+export interface RecurringCost extends FundingSourceAttribution {
   id: string;
   uid: string;
   name: string;

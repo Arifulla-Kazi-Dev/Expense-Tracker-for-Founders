@@ -1,7 +1,8 @@
 import type { PaymentStatus } from './expense.model';
+import type { FundingSourceAttribution } from './funding.model';
 import type { FirestoreDate } from './user-profile.model';
 
-export interface StartupCost {
+export interface StartupCost extends FundingSourceAttribution {
   id: string;
   uid: string;
   costName: string;

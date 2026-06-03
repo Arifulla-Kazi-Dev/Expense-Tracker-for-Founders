@@ -60,7 +60,7 @@ export class RegisterComponent implements OnInit {
   }
 
   get nameLabel(): string {
-    return `${this.isInviteFlow ? this.roleLabel : 'Founder'} name`;
+    return `${this.isInviteFlow ? this.roleLabel : 'Workspace owner'} name`;
   }
 
   get namePlaceholder(): string {
