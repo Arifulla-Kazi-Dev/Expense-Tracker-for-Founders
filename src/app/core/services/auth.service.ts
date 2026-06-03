@@ -391,6 +391,11 @@ export class AuthService {
       throw new Error('Invite link was not found. Ask the founder to generate a fresh invite.');
     }
 
+    if (invite.status === 'accepted' && invite.acceptedByUid === user.uid) {
+      await this.repairProfileFromAcceptedInvite(user, invite, existingData, fallbackName, includeCreatedAt);
+      return;
+    }
+
     if (invite.status !== 'pending') {
       throw new Error(`This invite is already ${invite.status}. Ask the founder to generate a fresh invite.`);
     }
