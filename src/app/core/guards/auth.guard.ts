@@ -2,8 +2,9 @@ import { inject } from '@angular/core';
 import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { map, take } from 'rxjs';
 
-import { Permission, hasPermission } from '../models/role.model';
+import { Permission } from '../models/role.model';
 import { AuthService } from '../services/auth.service';
+import { PermissionService } from '../services/permission.service';
 
 export const authGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
@@ -49,12 +50,12 @@ export const publicOnlyGuard: CanActivateFn = () => {
 
 export function permissionGuard(permission: Permission): CanActivateFn {
   return () => {
-    const authService = inject(AuthService);
+    const permissionService = inject(PermissionService);
     const router = inject(Router);
 
-    return authService.profile$.pipe(
+    return permissionService.permissions$.pipe(
       take(1),
-      map((profile) => hasPermission(profile?.role, permission) ? true : router.createUrlTree(['/dashboard'])),
+      map((permissions) => permissions?.[permission] ? true : router.createUrlTree(['/dashboard'])),
     );
   };
 }

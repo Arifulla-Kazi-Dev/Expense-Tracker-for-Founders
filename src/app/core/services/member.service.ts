@@ -13,7 +13,7 @@ import {
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 
 import { CompanyMember } from '../models/company.model';
-import { UserRole } from '../models/role.model';
+import { PermissionOverrides, UserRole } from '../models/role.model';
 import { CompanyService } from './company.service';
 import { PermissionService } from './permission.service';
 
@@ -59,6 +59,13 @@ export class MemberService {
   async suspend(uid: string): Promise<void> {
     await updateDoc(this.memberDoc(uid), {
       status: 'suspended',
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async updatePermissionOverrides(uid: string, permissionOverrides: PermissionOverrides): Promise<void> {
+    await updateDoc(this.memberDoc(uid), {
+      permissionOverrides,
       updatedAt: serverTimestamp(),
     });
   }

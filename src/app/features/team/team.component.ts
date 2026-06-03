@@ -5,7 +5,17 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { CompanyInvite, CompanyMember } from '../../core/models/company.model';
-import { Permission, ROLE_OPTIONS, ROLE_PERMISSIONS, INVITABLE_ROLES, UserRole, roleDisplayName } from '../../core/models/role.model';
+import {
+  ADMIN_PERMISSIONS,
+  INVITABLE_ROLES,
+  Permission,
+  PermissionOverrides,
+  ROLE_OPTIONS,
+  ROLE_PERMISSIONS,
+  UserRole,
+  effectivePermissions,
+  roleDisplayName,
+} from '../../core/models/role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../../core/services/company.service';
 import { InviteService } from '../../core/services/invite.service';
@@ -36,11 +46,10 @@ export class TeamComponent implements OnDestroy {
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
   readonly invitableRoles = INVITABLE_ROLES;
   readonly permissionRoles = ROLE_OPTIONS;
+  readonly permissionItems = PERMISSION_LABELS;
 
   readonly inviteForm = this.formBuilder.nonNullable.group({
     role: ['finance-manager' as UserRole, [Validators.required]],
-    invitedEmail: ['', [Validators.email]],
-    invitedPhone: [''],
     expiryDays: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
   });
 
@@ -63,6 +72,14 @@ export class TeamComponent implements OnDestroy {
     return this.permissionService.can('manageMembers');
   }
 
+  canManageRoles(): boolean {
+    return this.permissionService.can('manageRoles');
+  }
+
+  currentRoleLabel(): string {
+    return this.permissionService.roleLabel();
+  }
+
   roleLabel(role: UserRole): string {
     return roleDisplayName(role);
   }
@@ -81,6 +98,46 @@ export class TeamComponent implements OnDestroy {
     }
 
     return `${count} permission${count === 1 ? '' : 's'} enabled for this role.`;
+  }
+
+  selectInviteRole(role: UserRole): void {
+    this.inviteForm.controls.role.setValue(role);
+    this.inviteForm.controls.role.markAsDirty();
+  }
+
+  isInviteRoleSelected(role: UserRole): boolean {
+    return this.inviteForm.controls.role.value === role;
+  }
+
+  roleIcon(role: UserRole): string {
+    switch (role) {
+      case 'cofounder':
+        return 'shield-check';
+      case 'finance-manager':
+        return 'wallet';
+      case 'operations-manager':
+        return 'briefcase-business';
+      case 'hr-manager':
+        return 'users';
+      case 'auditor':
+        return 'file-search';
+      case 'investor':
+        return 'eye';
+      default:
+        return 'user-round';
+    }
+  }
+
+  inviteRoleClass(role: UserRole): string {
+    return this.isInviteRoleSelected(role)
+      ? 'border-teal-400 bg-teal-50 text-slate-950 ring-2 ring-teal-500/20 dark:border-teal-400/60 dark:bg-teal-400/10 dark:text-white'
+      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900';
+  }
+
+  roleHighlights(role: UserRole): string[] {
+    return this.permissionSummary(role)
+      .filter((permission) => permission !== 'Read-only access')
+      .slice(0, 3);
   }
 
   inviteLink(invite: CompanyInvite): string {
@@ -114,8 +171,6 @@ export class TeamComponent implements OnDestroy {
       this.showToast('Invite generated and link copied');
       this.inviteForm.patchValue({
         role: 'finance-manager',
-        invitedEmail: '',
-        invitedPhone: '',
         expiryDays: 7,
       });
       this.inviteForm.markAsPristine();
@@ -170,6 +225,38 @@ export class TeamComponent implements OnDestroy {
     await this.runAction(() => this.memberService.changeRole(member.uid, role), 'Member role updated');
   }
 
+  async toggleMemberPermission(member: CompanyMember, permission: Permission): Promise<void> {
+    if (!this.canEditPermission(member, permission)) {
+      return;
+    }
+
+    const defaultValue = Boolean(ROLE_PERMISSIONS[member.role]?.[permission]);
+    const nextValue = !this.permissionValue(member, permission);
+    const overrides: PermissionOverrides = { ...(member.permissionOverrides ?? {}) };
+
+    if (nextValue === defaultValue) {
+      delete overrides[permission];
+    } else {
+      overrides[permission] = nextValue;
+    }
+
+    await this.runAction(
+      () => this.memberService.updatePermissionOverrides(member.uid, overrides),
+      'Member permission updated',
+    );
+  }
+
+  async resetMemberPermissions(member: CompanyMember): Promise<void> {
+    if (!this.canEditMemberPermissions(member) || !this.hasPermissionOverrides(member)) {
+      return;
+    }
+
+    await this.runAction(
+      () => this.memberService.updatePermissionOverrides(member.uid, {}),
+      'Member permissions reset to role defaults',
+    );
+  }
+
   async suspend(member: CompanyMember): Promise<void> {
     if (!this.canChangeMember(member)) {
       return;
@@ -203,7 +290,75 @@ export class TeamComponent implements OnDestroy {
   }
 
   canChangeMember(member: CompanyMember): boolean {
-    return this.canManage() && member.role !== 'founder' && member.uid !== this.authService.currentUser?.uid;
+    if (!this.canManage() || member.role === 'founder' || member.uid === this.authService.currentUser?.uid) {
+      return false;
+    }
+
+    if (member.role === 'cofounder') {
+      return this.permissionService.currentRole === 'founder';
+    }
+
+    return true;
+  }
+
+  canEditMemberPermissions(member: CompanyMember): boolean {
+    if (!this.canManageRoles() || member.role === 'founder' || member.uid === this.authService.currentUser?.uid) {
+      return false;
+    }
+
+    if (member.role === 'cofounder') {
+      return this.permissionService.currentRole === 'founder';
+    }
+
+    return true;
+  }
+
+  canEditPermission(member: CompanyMember, permission: Permission): boolean {
+    if (permission === 'readOnly' || !this.canEditMemberPermissions(member)) {
+      return false;
+    }
+
+    if (member.role === 'cofounder' && ADMIN_PERMISSIONS.includes(permission)) {
+      return this.permissionService.currentRole === 'founder';
+    }
+
+    return true;
+  }
+
+  permissionValue(member: CompanyMember, permission: Permission): boolean {
+    return Boolean(effectivePermissions(member.role, member.permissionOverrides)?.[permission]);
+  }
+
+  hasPermissionOverrides(member: CompanyMember): boolean {
+    return Object.keys(member.permissionOverrides ?? {}).length > 0;
+  }
+
+  isPermissionOverride(member: CompanyMember, permission: Permission): boolean {
+    return Object.prototype.hasOwnProperty.call(member.permissionOverrides ?? {}, permission);
+  }
+
+  permissionToggleClass(member: CompanyMember, permission: Permission): string {
+    if (this.permissionValue(member, permission)) {
+      return this.isPermissionOverride(member, permission)
+        ? 'border-teal-200 bg-teal-50 text-teal-800 ring-teal-100 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-100 dark:ring-teal-400/20'
+        : 'border-slate-200 bg-slate-100 text-slate-700 ring-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700';
+    }
+
+    return this.isPermissionOverride(member, permission)
+      ? 'border-rose-200 bg-rose-50 text-rose-700 ring-rose-100 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100 dark:ring-rose-400/20'
+      : 'border-slate-200 bg-white text-slate-400 ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500 dark:ring-slate-800';
+  }
+
+  permissionStatusLabel(member: CompanyMember, permission: Permission): string {
+    if (permission === 'readOnly') {
+      return 'Always on';
+    }
+
+    if (!this.isPermissionOverride(member, permission)) {
+      return 'Role default';
+    }
+
+    return this.permissionValue(member, permission) ? 'Custom on' : 'Custom off';
   }
 
   dateLabel(value: unknown): string {

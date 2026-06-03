@@ -6,6 +6,7 @@ import {
   CategorySpend,
   DecisionNote,
   FounderMetric,
+  FundingUtilization,
   InsightBar,
   KpiMetric,
   LedgerPayment,
@@ -20,6 +21,7 @@ import { RecurringCost } from '../models/recurring-cost.model';
 import { StartupCost } from '../models/startup-cost.model';
 import { TeamPayment } from '../models/team-payment.model';
 import { currencyINR } from '../utils/finance-formatters';
+import { fundingTypeIcon, fundingTypeTone } from '../utils/funding-source-options';
 import { ExpenseService } from './expense.service';
 import { FounderNoteService } from './founder-note.service';
 import { FundingService } from './funding.service';
@@ -53,6 +55,7 @@ export const emptyDashboardSummary: DashboardSummary = {
   burnTrend: [],
   monthlySpendTrend: [],
   spendSources: [],
+  fundingUtilization: [],
   decisionNotes: [],
   hasData: false,
 };
@@ -137,6 +140,7 @@ export class DashboardService {
     const ledgerPayments = this.ledgerPayments(expenses, teamPayments, startupCosts, recurringCosts);
     const decisionNotes = this.decisionNotes(notes);
     const burnTrend = this.normalizedTrend(monthlySpendTrend);
+    const fundingUtilization = this.fundingUtilization(funding, expenses, teamPayments, startupCosts, recurringCosts);
 
     return {
       totalFunding,
@@ -177,6 +181,7 @@ export class DashboardService {
       burnTrend,
       monthlySpendTrend,
       spendSources: this.spendSources(totalExpenseRecords, totalStartupCosts, totalTeamPayments, totalRecurringCosts),
+      fundingUtilization,
       decisionNotes,
       hasData,
     };
@@ -445,6 +450,51 @@ export class DashboardService {
     ];
 
     return sources.filter((source) => source.amount > 0);
+  }
+
+  private fundingUtilization(
+    funding: Funding[],
+    expenses: Expense[],
+    teamPayments: TeamPayment[],
+    startupCosts: StartupCost[],
+    recurringCosts: RecurringCost[],
+  ): FundingUtilization[] {
+    const utilizedBySource = new Map<string, number>();
+    const addUtilized = (sourceId: string | undefined, amount: number): void => {
+      if (!sourceId || amount <= 0) {
+        return;
+      }
+
+      addToMap(utilizedBySource, sourceId, amount);
+    };
+
+    expenses.forEach((item) => addUtilized(item.fundingSourceId, paidAmount(item.paymentStatus, item.amount, item.paidAmount)));
+    teamPayments.forEach((item) => addUtilized(item.fundingSourceId, paidAmount(item.paymentStatus, item.monthlyAmount, item.paidAmount)));
+    startupCosts.forEach((item) => addUtilized(item.fundingSourceId, paidAmount(item.paymentStatus, item.amount, item.paidAmount)));
+    recurringCosts
+      .filter((item) => item.isActive)
+      .forEach((item) => addUtilized(item.fundingSourceId, monthlyEquivalent(item.amount, item.billingCycle)));
+
+    return funding
+      .map((source) => {
+        const utilized = utilizedBySource.get(source.id) ?? 0;
+        const received = source.amount;
+        const remaining = Math.max(received - utilized, 0);
+        const utilizationPercentage = received > 0 ? Math.min(roundOne((utilized / received) * 100), 100) : 0;
+
+        return {
+          sourceId: source.id,
+          sourceName: source.sourceName,
+          type: source.type,
+          received,
+          utilized,
+          remaining,
+          utilizationPercentage,
+          icon: fundingTypeIcon(source.type),
+          tone: fundingTypeTone(source.type) as Tone,
+        };
+      })
+      .sort((a, b) => b.received - a.received);
   }
 
   private upcomingExpenseEntries(expenses: Expense[], startupCosts: StartupCost[], recurringCosts: RecurringCost[]) {

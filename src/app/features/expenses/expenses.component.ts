@@ -6,6 +6,7 @@ import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { ExpenseService } from '../../core/services/expense.service';
 import { FundingService } from '../../core/services/funding.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
 import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
@@ -20,6 +21,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 export class ExpensesComponent {
   private readonly expenseService = inject(ExpenseService);
   private readonly fundingService = inject(FundingService);
+  private readonly permissionService = inject(PermissionService);
   private readonly expenses = toSignal(this.expenseService.list(), { initialValue: [] as Expense[] });
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
 
@@ -102,6 +104,10 @@ export class ExpensesComponent {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+  }
+
+  canEdit(): boolean {
+    return this.permissionService.can('manageExpenses');
   }
 
   private async runMutation(action: () => Promise<unknown>): Promise<void> {

@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { FUNDING_TYPES, Funding, FundingInput } from '../../core/models/funding.model';
 import { FundingService } from '../../core/services/funding.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
 import { fundingTypeOptions } from '../../core/utils/funding-source-options';
@@ -17,6 +18,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 })
 export class FundingComponent {
   private readonly fundingService = inject(FundingService);
+  private readonly permissionService = inject(PermissionService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
 
   errorMessage = '';
@@ -81,6 +83,10 @@ export class FundingComponent {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+  }
+
+  canEdit(): boolean {
+    return this.permissionService.can('manageFunding');
   }
 
   private async runMutation(action: () => Promise<unknown>): Promise<void> {

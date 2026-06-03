@@ -6,6 +6,7 @@ import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { TEAM_COMPENSATION_TYPES, TEAM_PAYMENT_TYPES, TeamPayment, TeamPaymentInput } from '../../core/models/team-payment.model';
 import { FundingService } from '../../core/services/funding.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { TeamPaymentService } from '../../core/services/team-payment.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
@@ -20,6 +21,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 })
 export class TeamPaymentsComponent {
   private readonly fundingService = inject(FundingService);
+  private readonly permissionService = inject(PermissionService);
   private readonly teamPaymentService = inject(TeamPaymentService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly teamPayments = toSignal(this.teamPaymentService.list(), { initialValue: [] as TeamPayment[] });
@@ -113,6 +115,10 @@ export class TeamPaymentsComponent {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+  }
+
+  canEdit(): boolean {
+    return this.permissionService.can('manageTeamPayments');
   }
 
   private async runMutation(action: () => Promise<unknown>): Promise<void> {

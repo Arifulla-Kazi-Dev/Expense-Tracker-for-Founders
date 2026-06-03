@@ -27,6 +27,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   @Input() rows: FeaturePageRow[] = [];
   @Input() errorMessage = '';
   @Input() isBusy = false;
+  @Input() canEdit = true;
 
   @Output() saveRecord = new EventEmitter<FeatureSaveEvent>();
   @Output() deleteRecord = new EventEmitter<string>();
@@ -65,12 +66,20 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   openCreateModal(): void {
+    if (!this.canEdit) {
+      return;
+    }
+
     this.editingRow = null;
     this.resetForm();
     this.isModalOpen = true;
   }
 
   openEditModal(row: FeaturePageRow): void {
+    if (!this.canEdit) {
+      return;
+    }
+
     this.editingRow = row;
     this.resetForm(row.raw ?? {});
     this.isModalOpen = true;
@@ -87,7 +96,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   submitForm(): void {
-    if (this.form.invalid || this.isBusy) {
+    if (!this.canEdit || this.form.invalid || this.isBusy) {
       this.form.markAllAsTouched();
       return;
     }
@@ -100,7 +109,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   requestDelete(row: FeaturePageRow): void {
-    if (!row.id || this.isBusy) {
+    if (!this.canEdit || !row.id || this.isBusy) {
       return;
     }
 

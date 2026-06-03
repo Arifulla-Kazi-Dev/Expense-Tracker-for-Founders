@@ -57,7 +57,7 @@ export function fundingSourceLabel(record: FundingSourceAttribution): string {
   return `${record.fundingSourceName}${record.fundingSourceType ? ` / ${record.fundingSourceType}` : ''}`;
 }
 
-function fundingTypeIcon(type: string): string {
+export function fundingTypeIcon(type: string): string {
   const value = type.toLowerCase();
 
   if (value.includes('grant')) {
@@ -87,7 +87,7 @@ function fundingTypeIcon(type: string): string {
   return 'wallet';
 }
 
-function fundingTypeTone(type: string): FeatureFormOption['tone'] {
+export function fundingTypeTone(type: string): FeatureFormOption['tone'] {
   const value = type.toLowerCase();
 
   if (value.includes('grant') || value.includes('revenue') || value.includes('customer')) {

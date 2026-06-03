@@ -67,6 +67,18 @@ export interface SpendSource {
   tone: Tone;
 }
 
+export interface FundingUtilization {
+  sourceId: string;
+  sourceName: string;
+  type: string;
+  received: number;
+  utilized: number;
+  remaining: number;
+  utilizationPercentage: number;
+  icon: string;
+  tone: Tone;
+}
+
 export interface DecisionNote {
   title: string;
   priority: 'High' | 'Medium' | 'Low';

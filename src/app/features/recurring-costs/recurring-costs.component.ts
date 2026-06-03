@@ -6,6 +6,7 @@ import { EXPENSE_CATEGORIES } from '../../core/models/expense.model';
 import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { FundingService } from '../../core/services/funding.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { RecurringCostService } from '../../core/services/recurring-cost.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { booleanValue, numberValue, textValue } from '../../core/utils/feature-form-values';
@@ -20,6 +21,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 })
 export class RecurringCostsComponent {
   private readonly fundingService = inject(FundingService);
+  private readonly permissionService = inject(PermissionService);
   private readonly recurringCostService = inject(RecurringCostService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly recurringCosts = toSignal(this.recurringCostService.list(), { initialValue: [] as RecurringCost[] });
@@ -93,6 +95,10 @@ export class RecurringCostsComponent {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+  }
+
+  canEdit(): boolean {
+    return this.permissionService.can('manageRecurringCosts');
   }
 
   private async runMutation(action: () => Promise<unknown>): Promise<void> {

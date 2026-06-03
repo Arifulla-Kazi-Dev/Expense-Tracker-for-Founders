@@ -28,12 +28,31 @@ service cloud.firestore {
       return get(memberPath(companyId, request.auth.uid)).data.role;
     }
 
+    function memberData(companyId) {
+      return get(memberPath(companyId, request.auth.uid)).data;
+    }
+
+    function permissionOverride(companyId, permission) {
+      return memberData(companyId).keys().hasAny(['permissionOverrides'])
+        ? memberData(companyId).permissionOverrides[permission]
+        : null;
+    }
+
     function hasRole(companyId, roles) {
       return isCompanyMember(companyId) && roles.hasAny([role(companyId)]);
     }
 
+    function hasPermission(companyId, permission, defaultRoles) {
+      return isCompanyMember(companyId)
+        && permissionOverride(companyId, permission) != false
+        && (
+          permissionOverride(companyId, permission) == true
+          || hasRole(companyId, defaultRoles)
+        );
+    }
+
     function canManageCompany(companyId) {
-      return hasRole(companyId, ['founder', 'cofounder']);
+      return hasPermission(companyId, 'manageCompany', ['founder', 'cofounder']);
     }
 
     function isCompanyOwner() {
@@ -41,23 +60,43 @@ service cloud.firestore {
     }
 
     function canInvite(companyId) {
-      return hasRole(companyId, ['founder', 'cofounder']);
+      return hasPermission(companyId, 'inviteMembers', ['founder', 'cofounder']);
     }
 
     function canManageFinance(companyId) {
-      return hasRole(companyId, ['founder', 'cofounder', 'finance-manager']);
+      return hasPermission(companyId, 'manageFunding', ['founder', 'cofounder', 'finance-manager']);
     }
 
     function canManageExpenses(companyId) {
-      return hasRole(companyId, ['founder', 'cofounder', 'finance-manager', 'operations-manager']);
+      return hasPermission(companyId, 'manageExpenses', ['founder', 'cofounder', 'finance-manager', 'operations-manager']);
     }
 
     function canManageTeamPayments(companyId) {
-      return hasRole(companyId, ['founder', 'cofounder', 'finance-manager', 'hr-manager']);
+      return hasPermission(companyId, 'manageTeamPayments', ['founder', 'cofounder', 'finance-manager', 'hr-manager']);
+    }
+
+    function canManageStartupCosts(companyId) {
+      return hasPermission(companyId, 'manageStartupCosts', ['founder', 'cofounder', 'finance-manager']);
+    }
+
+    function canManageRecurringCosts(companyId) {
+      return hasPermission(companyId, 'manageRecurringCosts', ['founder', 'cofounder', 'finance-manager', 'operations-manager']);
     }
 
     function canManageFounderNotes(companyId) {
-      return hasRole(companyId, ['founder', 'cofounder', 'operations-manager']);
+      return hasPermission(companyId, 'manageFounderNotes', ['founder', 'cofounder', 'operations-manager']);
+    }
+
+    function canManageMembers(companyId) {
+      return hasPermission(companyId, 'manageMembers', ['founder', 'cofounder']);
+    }
+
+    function canManageRoles(companyId) {
+      return hasPermission(companyId, 'manageRoles', ['founder', 'cofounder']);
+    }
+
+    function isFounder(companyId) {
+      return hasRole(companyId, ['founder']);
     }
 
     function validInviteForJoin(companyId, memberRole) {
@@ -79,6 +118,25 @@ service cloud.firestore {
       return request.resource.data.uid == resource.data.uid
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.invitedBy == resource.data.invitedBy;
+    }
+
+    function protectedCofounderTarget(companyId) {
+      return (
+        resource.data.role == 'cofounder'
+        || request.resource.data.role == 'cofounder'
+      )
+        ? isFounder(companyId)
+        : true;
+    }
+
+    function roleChangeAllowed(companyId) {
+      return request.resource.data.role == resource.data.role
+        || canManageRoles(companyId);
+    }
+
+    function permissionOverrideChangeAllowed(companyId) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['permissionOverrides'])
+        || canManageRoles(companyId);
     }
 
     function coreInviteFieldsUnchanged(companyId) {
@@ -145,14 +203,21 @@ service cloud.firestore {
             )
           );
 
-        allow update: if canManageCompany(companyId)
+        allow update: if canManageMembers(companyId)
           && resource.data.role != 'founder'
           && request.resource.data.role != 'founder'
+          && protectedCofounderTarget(companyId)
           && coreMemberFieldsUnchanged()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'updatedAt']);
+          && roleChangeAllowed(companyId)
+          && permissionOverrideChangeAllowed(companyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'permissionOverrides', 'updatedAt']);
 
-        allow delete: if canManageCompany(companyId)
-          && resource.data.role != 'founder';
+        allow delete: if canManageMembers(companyId)
+          && resource.data.role != 'founder'
+          && (
+            resource.data.role != 'cofounder'
+            || isFounder(companyId)
+          );
       }
 
       match /invites/{inviteId} {
@@ -205,12 +270,12 @@ service cloud.firestore {
 
       match /startupCosts/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageFinance(companyId);
+        allow write: if canManageStartupCosts(companyId);
       }
 
       match /recurringCosts/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageExpenses(companyId);
+        allow write: if canManageRecurringCosts(companyId);
       }
 
       match /teamPayments/{docId} {

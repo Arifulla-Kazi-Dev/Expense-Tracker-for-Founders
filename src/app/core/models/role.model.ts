@@ -23,6 +23,8 @@ export type Permission =
   | 'exportReports'
   | 'readOnly';
 
+export type PermissionOverrides = Partial<Record<Permission, boolean>>;
+
 export const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   founder: 'Founder / Super Admin',
   cofounder: 'Co-Founder',
@@ -63,6 +65,13 @@ export const PERMISSIONS: Permission[] = [
   'readOnly',
 ];
 
+export const ADMIN_PERMISSIONS: Permission[] = [
+  'manageCompany',
+  'manageMembers',
+  'inviteMembers',
+  'manageRoles',
+];
+
 export const ROLE_PERMISSIONS: Record<UserRole, Record<Permission, boolean>> = {
   founder: allPermissions(true),
   cofounder: {
@@ -101,12 +110,30 @@ export function hasPermission(role: UserRole | null | undefined, permission: Per
   return role ? Boolean(ROLE_PERMISSIONS[role]?.[permission]) : false;
 }
 
+export function effectivePermissions(
+  role: UserRole | null | undefined,
+  overrides: PermissionOverrides | null | undefined,
+): Record<Permission, boolean> | null {
+  if (!role) {
+    return null;
+  }
+
+  const permissions = {
+    ...ROLE_PERMISSIONS[role],
+    ...(overrides ?? {}),
+  };
+
+  permissions.readOnly = true;
+  return permissions;
+}
+
 function allPermissions(value: boolean): Record<Permission, boolean> {
   return Object.fromEntries(PERMISSIONS.map((permission) => [permission, value])) as Record<Permission, boolean>;
 }
 
 function permissionSet(enabled: Permission[]): Record<Permission, boolean> {
   const permissions = allPermissions(false);
+  permissions.readOnly = true;
   enabled.forEach((permission) => {
     permissions[permission] = true;
   });

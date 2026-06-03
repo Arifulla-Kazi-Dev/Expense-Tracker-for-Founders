@@ -1,5 +1,5 @@
 import type { FirestoreDate } from './user-profile.model';
-import type { UserRole } from './role.model';
+import type { PermissionOverrides, UserRole } from './role.model';
 
 export type CompanyPlan = 'free';
 export type CompanyMemberStatus = 'active' | 'invited' | 'suspended';
@@ -29,6 +29,7 @@ export interface CompanyMember {
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
   inviteId?: string;
+  permissionOverrides?: PermissionOverrides;
 }
 
 export interface CompanyInvite {

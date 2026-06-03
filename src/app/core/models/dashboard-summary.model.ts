@@ -2,6 +2,7 @@ import type {
   CategorySpend,
   DecisionNote,
   FounderMetric,
+  FundingUtilization,
   InsightBar,
   KpiMetric,
   LedgerPayment,
@@ -35,6 +36,7 @@ export interface DashboardSummary {
   burnTrend: number[];
   monthlySpendTrend: MonthlyTrendPoint[];
   spendSources: SpendSource[];
+  fundingUtilization: FundingUtilization[];
   decisionNotes: DecisionNote[];
   hasData: boolean;
 }

@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { FOUNDER_NOTE_PRIORITIES, FounderNote, FounderNoteInput } from '../../core/models/founder-note.model';
 import { FounderNoteService } from '../../core/services/founder-note.service';
+import { PermissionService } from '../../core/services/permission.service';
 import { textValue } from '../../core/utils/feature-form-values';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
@@ -15,6 +16,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 })
 export class FounderNotesComponent {
   private readonly founderNoteService = inject(FounderNoteService);
+  private readonly permissionService = inject(PermissionService);
   private readonly notes = toSignal(this.founderNoteService.list(), { initialValue: [] as FounderNote[] });
 
   errorMessage = '';
@@ -86,6 +88,10 @@ export class FounderNotesComponent {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+  }
+
+  canEdit(): boolean {
+    return this.permissionService.can('manageFounderNotes');
   }
 
   private async runMutation(action: () => Promise<unknown>): Promise<void> {
