@@ -40,24 +40,33 @@
 
   @if (canManage()) {
     <section class="ui-panel mt-4 rounded-lg p-5">
-      <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Access policy</p>
-          <h2 class="mt-1 text-xl font-semibold">Role permissions</h2>
+          <h2 class="mt-1 text-xl font-semibold">Role presets</h2>
           <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            These are the role defaults. Founder and permitted admins can tune each member below without removing company-wide read access.
+            Pick a role as the starting point. Every active member can view the workspace; the controls below only decide who can edit records, invite people, or change access.
           </p>
         </div>
-        <div class="rounded-lg bg-slate-100 p-2 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-          <svg lucideIcon="shield-check" class="size-5"></svg>
+        <div class="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
+          <span class="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
+            <svg lucideIcon="shield-check" class="size-4 text-teal-600 dark:text-teal-300"></svg>
+            How this works
+          </span>
+          <span>1. Invite with a role preset.</span>
+          <span>2. After joining, adjust that member's edit access.</span>
+          <span>3. Founder controls co-founder admin access.</span>
         </div>
       </div>
 
       <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         @for (role of permissionRoles; track role) {
           <article class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/70">
-            <div class="flex items-start justify-between gap-3">
-              <div>
+            <div class="flex items-start gap-3">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+                <svg [lucideIcon]="roleIcon(role)" class="size-4"></svg>
+              </div>
+              <div class="min-w-0 flex-1">
                 <p class="text-sm font-semibold">{{ roleLabel(role) }}</p>
                 <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ permissionDescription(role) }}</p>
               </div>
@@ -251,42 +260,88 @@
               </div>
 
               @if (member.role !== 'founder') {
-                <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/55">
-                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Member permissions</p>
+                <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/55">
+                  <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                    <div class="max-w-2xl">
+                      <p class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Access editor</p>
+                      <h4 class="mt-1 text-sm font-semibold">What {{ member.name }} can edit</h4>
                       <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        Role defaults stay in place unless a chip is explicitly customized.
+                        {{ memberAccessSummary(member) }}. View access is always enabled for active workspace members.
                       </p>
+                      @if (!canEditMemberPermissions(member)) {
+                        <p class="mt-2 inline-flex w-fit rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                          Review only from your current role
+                        </p>
+                      }
                     </div>
-                    @if (canEditMemberPermissions(member) && hasPermissionOverrides(member)) {
-                      <button
-                        type="button"
-                        class="inline-flex h-8 w-fit items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
-                        (click)="resetMemberPermissions(member)"
-                      >
-                        <svg lucideIcon="rotate-ccw" class="size-3.5"></svg>
-                        Reset defaults
-                      </button>
-                    }
+                    <div class="flex flex-wrap gap-2">
+                      <span class="inline-flex h-8 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                        <span class="size-2 rounded-full bg-slate-400"></span>
+                        Default
+                      </span>
+                      <span class="inline-flex h-8 items-center gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 text-xs font-semibold text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-100">
+                        <span class="size-2 rounded-full bg-teal-500"></span>
+                        Custom
+                      </span>
+                      @if (canEditMemberPermissions(member) && hasPermissionOverrides(member)) {
+                        <button
+                          type="button"
+                          class="inline-flex h-8 w-fit items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+                          (click)="resetMemberPermissions(member)"
+                        >
+                          <svg lucideIcon="rotate-ccw" class="size-3.5"></svg>
+                          Reset defaults
+                        </button>
+                      }
+                    </div>
                   </div>
 
-                  <div class="mt-3 flex flex-wrap gap-2">
-                    @for (item of permissionItems; track item.permission) {
-                      <button
-                        type="button"
-                        class="inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-70"
-                        [ngClass]="permissionToggleClass(member, item.permission)"
-                        [disabled]="!canEditPermission(member, item.permission)"
-                        [title]="permissionStatusLabel(member, item.permission)"
-                        (click)="toggleMemberPermission(member, item.permission)"
-                      >
-                        <svg [lucideIcon]="permissionValue(member, item.permission) ? 'check-circle-2' : 'circle-minus'" class="size-3.5"></svg>
-                        {{ item.label }}
-                        @if (isPermissionOverride(member, item.permission)) {
-                          <span class="rounded-full bg-white/60 px-1.5 py-0.5 text-[10px] uppercase dark:bg-slate-950/60">Custom</span>
-                        }
-                      </button>
+                  <div class="mt-4 grid gap-3">
+                    @for (group of permissionGroups; track group.title) {
+                      <section class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/70">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="flex min-w-0 items-start gap-3">
+                            <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+                              <svg [lucideIcon]="group.icon" class="size-4"></svg>
+                            </div>
+                            <div class="min-w-0">
+                              <p class="text-sm font-semibold">{{ group.title }}</p>
+                              <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ group.detail }}</p>
+                            </div>
+                          </div>
+                          <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {{ groupEnabledCount(member, group) }}/{{ group.permissions.length }}
+                          </span>
+                        </div>
+
+                        <div class="mt-3 grid gap-2">
+                          @for (permission of group.permissions; track permission) {
+                            <div class="flex flex-col gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900/70">
+                              <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                  <p class="text-sm font-semibold">{{ permissionItem(permission).label }}</p>
+                                  <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ring-1" [ngClass]="isPermissionOverride(member, permission) ? 'bg-teal-50 text-teal-700 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-100 dark:ring-teal-400/20' : 'bg-white text-slate-500 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-800'">
+                                    {{ isPermissionOverride(member, permission) ? 'Custom' : 'Default' }}
+                                  </span>
+                                </div>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ permissionItem(permission).detail }}</p>
+                              </div>
+
+                              <button
+                                type="button"
+                                class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-70"
+                                [ngClass]="permissionToggleClass(member, permission)"
+                                [disabled]="!canEditPermission(member, permission)"
+                                [title]="permissionStatusLabel(member, permission)"
+                                (click)="toggleMemberPermission(member, permission)"
+                              >
+                                <svg [lucideIcon]="permissionValue(member, permission) ? 'check-circle-2' : 'circle-minus'" class="size-3.5"></svg>
+                                {{ permissionValue(member, permission) ? 'Allowed' : 'Blocked' }}
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      </section>
                     }
                   </div>
                 </div>

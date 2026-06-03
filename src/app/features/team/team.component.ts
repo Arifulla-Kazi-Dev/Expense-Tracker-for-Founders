@@ -47,6 +47,7 @@ export class TeamComponent implements OnDestroy {
   readonly invitableRoles = INVITABLE_ROLES;
   readonly permissionRoles = ROLE_OPTIONS;
   readonly permissionItems = PERMISSION_LABELS;
+  readonly permissionGroups = PERMISSION_GROUPS;
 
   readonly inviteForm = this.formBuilder.nonNullable.group({
     role: ['finance-manager' as UserRole, [Validators.required]],
@@ -97,7 +98,11 @@ export class TeamComponent implements OnDestroy {
       return 'Full company ownership and every workspace permission.';
     }
 
-    return `${count} permission${count === 1 ? '' : 's'} enabled for this role.`;
+    const writeCount = this.permissionSummary(role).filter((permission) => permission !== 'View everything').length;
+
+    return writeCount > 0
+      ? `Can edit ${writeCount} workspace area${writeCount === 1 ? '' : 's'} by default.`
+      : 'View-only by default. No edit access unless customized.';
   }
 
   selectInviteRole(role: UserRole): void {
@@ -116,7 +121,7 @@ export class TeamComponent implements OnDestroy {
       case 'finance-manager':
         return 'wallet';
       case 'operations-manager':
-        return 'briefcase-business';
+        return 'briefcase';
       case 'hr-manager':
         return 'users';
       case 'auditor':
@@ -124,7 +129,7 @@ export class TeamComponent implements OnDestroy {
       case 'investor':
         return 'eye';
       default:
-        return 'user-round';
+        return 'user';
     }
   }
 
@@ -136,7 +141,7 @@ export class TeamComponent implements OnDestroy {
 
   roleHighlights(role: UserRole): string[] {
     return this.permissionSummary(role)
-      .filter((permission) => permission !== 'Read-only access')
+      .filter((permission) => permission !== 'View everything')
       .slice(0, 3);
   }
 
@@ -329,6 +334,26 @@ export class TeamComponent implements OnDestroy {
     return Boolean(effectivePermissions(member.role, member.permissionOverrides)?.[permission]);
   }
 
+  memberAccessSummary(member: CompanyMember): string {
+    const writePermissions = PERMISSION_LABELS.filter((item) => item.permission !== 'readOnly');
+    const enabled = writePermissions.filter((item) => this.permissionValue(member, item.permission)).length;
+    const custom = Object.keys(member.permissionOverrides ?? {}).length;
+
+    return `${enabled} edit area${enabled === 1 ? '' : 's'} enabled${custom ? `, ${custom} custom override${custom === 1 ? '' : 's'}` : ''}`;
+  }
+
+  permissionItem(permission: Permission): PermissionItem {
+    return PERMISSION_LABELS.find((item) => item.permission === permission) ?? {
+      permission,
+      label: permission,
+      detail: 'Workspace access',
+    };
+  }
+
+  groupEnabledCount(member: CompanyMember, group: PermissionGroup): number {
+    return group.permissions.filter((permission) => this.permissionValue(member, permission)).length;
+  }
+
   hasPermissionOverrides(member: CompanyMember): boolean {
     return Object.keys(member.permissionOverrides ?? {}).length > 0;
   }
@@ -446,18 +471,52 @@ interface TeamConfirmAction {
   successMessage: string;
 }
 
-const PERMISSION_LABELS: Array<{ permission: Permission; label: string }> = [
-  { permission: 'manageCompany', label: 'Company settings' },
-  { permission: 'manageMembers', label: 'Manage members' },
-  { permission: 'inviteMembers', label: 'Invite team' },
-  { permission: 'manageRoles', label: 'Role changes' },
-  { permission: 'manageFunding', label: 'Funding records' },
-  { permission: 'manageExpenses', label: 'Expense records' },
-  { permission: 'manageTeamPayments', label: 'Salaries' },
-  { permission: 'manageStartupCosts', label: 'Startup costs' },
-  { permission: 'manageRecurringCosts', label: 'Recurring costs' },
-  { permission: 'manageFounderNotes', label: 'Workspace notes' },
-  { permission: 'viewReports', label: 'Reports' },
-  { permission: 'exportReports', label: 'Exports' },
-  { permission: 'readOnly', label: 'Read-only access' },
+const PERMISSION_LABELS: PermissionItem[] = [
+  { permission: 'manageCompany', label: 'Company settings', detail: 'Edit workspace name, plan, and company setup' },
+  { permission: 'manageMembers', label: 'Manage members', detail: 'Suspend or remove non-founder members' },
+  { permission: 'inviteMembers', label: 'Invite team', detail: 'Generate and revoke invite links' },
+  { permission: 'manageRoles', label: 'Change access', detail: 'Update member roles and custom permissions' },
+  { permission: 'manageFunding', label: 'Funding', detail: 'Create, edit, and delete funding sources' },
+  { permission: 'manageExpenses', label: 'Expenses', detail: 'Create, edit, and delete expense records' },
+  { permission: 'manageTeamPayments', label: 'Salaries', detail: 'Manage salaries, stipends, contractors, and interns' },
+  { permission: 'manageStartupCosts', label: 'Startup costs', detail: 'Manage one-time setup and compliance costs' },
+  { permission: 'manageRecurringCosts', label: 'Recurring costs', detail: 'Manage subscriptions and recurring commitments' },
+  { permission: 'manageFounderNotes', label: 'Workspace notes', detail: 'Manage decision notes and review context' },
+  { permission: 'viewReports', label: 'Reports', detail: 'Open reports and analytics views' },
+  { permission: 'exportReports', label: 'Exports', detail: 'Prepare report exports for review' },
+  { permission: 'readOnly', label: 'View everything', detail: 'Every active member can view workspace records' },
 ];
+
+const PERMISSION_GROUPS: PermissionGroup[] = [
+  {
+    title: 'Admin controls',
+    detail: 'Company setup, members, invites, and role access',
+    icon: 'shield-check',
+    permissions: ['manageCompany', 'manageMembers', 'inviteMembers', 'manageRoles'],
+  },
+  {
+    title: 'Finance records',
+    detail: 'Funding, expenses, salaries, startup costs, and recurring costs',
+    icon: 'wallet',
+    permissions: ['manageFunding', 'manageExpenses', 'manageTeamPayments', 'manageStartupCosts', 'manageRecurringCosts'],
+  },
+  {
+    title: 'Review and reporting',
+    detail: 'Workspace notes, reports, exports, and view-only access',
+    icon: 'bar-chart-3',
+    permissions: ['manageFounderNotes', 'viewReports', 'exportReports', 'readOnly'],
+  },
+];
+
+interface PermissionItem {
+  permission: Permission;
+  label: string;
+  detail: string;
+}
+
+interface PermissionGroup {
+  title: string;
+  detail: string;
+  icon: string;
+  permissions: Permission[];
+}
