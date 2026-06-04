@@ -67,6 +67,7 @@ export function isMissingWorkspaceProfileError(error: unknown): boolean {
 }
 
 const AUTH_TIMEOUT_MS = 15000;
+const GOOGLE_AUTH_TIMEOUT_MS = 45000;
 const PROFILE_SYNC_TIMEOUT_MS = 15000;
 const INVITE_TOKEN_STORAGE_KEY = 'inviteToken';
 const LEGACY_LEDGER_COLLECTIONS = [
@@ -217,7 +218,7 @@ export class AuthService {
     try {
       const result = await withTimeout(
         this.runInFirebaseContext(() => signInWithPopup(this.auth, provider)),
-        AUTH_TIMEOUT_MS,
+        GOOGLE_AUTH_TIMEOUT_MS,
         'Google Sign-In is taking too long. Check popup permissions and Cloud sign-in settings.',
       );
 

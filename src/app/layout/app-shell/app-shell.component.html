@@ -55,7 +55,7 @@
   }
 
   <aside
-    class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-slate-950 px-4 py-5 text-white shadow-2xl transition-transform duration-300 lg:hidden"
+    class="fixed inset-y-0 left-0 z-50 flex w-[min(21rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden bg-slate-950 px-4 py-5 text-white shadow-2xl transition-transform duration-300 lg:hidden"
     [style.transform]="isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)'"
   >
     <div class="flex items-center justify-between">
@@ -77,13 +77,13 @@
     </div>
 
     @if (hasMultipleCompanies()) {
-      <div class="mt-5 rounded-lg border border-white/10 bg-white/[0.06] p-3">
+      <div class="mt-5 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.06] p-3">
         <p class="text-xs font-semibold text-slate-400">Active company</p>
-        <div class="mt-3 grid gap-2">
+        <div class="mt-3 grid max-h-44 gap-2 overflow-y-auto pr-1">
           @for (membership of memberships(); track membership.companyId) {
             <button
               type="button"
-              class="flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition disabled:cursor-wait disabled:opacity-60"
+              class="flex w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border px-3 py-2 text-left transition disabled:cursor-wait disabled:opacity-60"
               [ngClass]="isActiveCompany(membership.companyId) ? 'border-teal-300 bg-teal-300/12 text-white' : 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'"
               [disabled]="isSwitchingCompany"
               (click)="selectActiveCompany(membership.companyId)"
@@ -104,7 +104,7 @@
       </div>
     }
 
-    <nav class="mt-8 flex flex-1 flex-col gap-1" aria-label="Mobile navigation">
+    <nav class="mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1" aria-label="Mobile navigation">
       @for (item of visibleNavigationItems(); track item.label) {
         <a
           [routerLink]="item.route"
@@ -119,26 +119,47 @@
       }
     </nav>
 
-    <div class="mt-5 border-t border-white/10 pt-4">
-      <a
-        routerLink="/profile"
-        class="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] p-3 transition hover:bg-white/10"
-        (click)="closeMobileMenu()"
-      >
-        <div class="flex size-10 items-center justify-center rounded-full bg-teal-500 text-sm font-semibold text-slate-950">{{ initials() }}</div>
-        <div class="min-w-0">
-          <p class="truncate text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
-          <p class="truncate text-xs text-slate-400">{{ roleLabel() }}</p>
+    <div class="mt-4 shrink-0 border-t border-white/10 pt-4">
+      @if (user()) {
+        <a
+          routerLink="/profile"
+          class="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] p-3 transition hover:bg-white/10"
+          (click)="closeMobileMenu()"
+        >
+          <div class="flex size-10 items-center justify-center rounded-full bg-teal-500 text-sm font-semibold text-slate-950">{{ initials() }}</div>
+          <div class="min-w-0">
+            <p class="truncate text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
+            <p class="truncate text-xs text-slate-400">{{ roleLabel() }}</p>
+          </div>
+        </a>
+        <button
+          type="button"
+          class="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-60"
+          [disabled]="isLoggingOut"
+          (click)="logout()"
+        >
+          <svg lucideIcon="log-out" class="size-4"></svg>
+          {{ isLoggingOut ? 'Signing out' : 'Log out' }}
+        </button>
+      } @else {
+        <div class="grid gap-2">
+          <a
+            routerLink="/login"
+            [queryParams]="{ intent: 'signin' }"
+            class="inline-flex h-10 w-full items-center justify-center rounded-lg bg-white px-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+            (click)="closeMobileMenu()"
+          >
+            Sign in
+          </a>
+          <a
+            routerLink="/register"
+            class="inline-flex h-10 w-full items-center justify-center rounded-lg border border-white/10 px-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+            (click)="closeMobileMenu()"
+          >
+            Create account
+          </a>
         </div>
-      </a>
-      <button
-        type="button"
-        class="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
-        (click)="logout()"
-      >
-        <svg lucideIcon="log-out" class="size-4"></svg>
-        Log out
-      </button>
+      }
     </div>
   </aside>
 
@@ -164,13 +185,13 @@
           @if (isCompanySwitcherOpen) {
             <button
               type="button"
-              class="fixed inset-0 z-20 hidden cursor-default md:block"
+              class="fixed inset-0 z-20 hidden cursor-default lg:block"
               aria-label="Close company switcher"
               (click)="closeCompanySwitcher()"
             ></button>
           }
 
-          <div class="relative z-30 hidden min-w-64 md:block">
+          <div class="relative z-30 hidden w-64 shrink-0 lg:block">
             <button
               type="button"
               class="flex h-12 w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
@@ -190,7 +211,7 @@
             </button>
 
             @if (isCompanySwitcherOpen) {
-              <div class="absolute left-0 top-14 z-50 w-[22rem] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950" role="listbox" aria-label="Switch company">
+              <div class="absolute right-0 top-14 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950" role="listbox" aria-label="Switch company">
                 <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
                   <p class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Switch workspace</p>
                   <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Only companies where you have active access appear here.</p>
@@ -224,7 +245,7 @@
           </div>
         }
 
-        <div class="hidden min-w-72 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:flex dark:border-slate-800 dark:bg-slate-900">
+        <div class="hidden min-w-72 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 xl:flex dark:border-slate-800 dark:bg-slate-900">
           <svg lucideIcon="search" class="size-4 text-slate-400"></svg>
           <input
             type="search"
@@ -236,7 +257,7 @@
 
         <button
           type="button"
-          class="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 sm:flex dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          class="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 xl:flex dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           (click)="simulateSync()"
         >
           <svg lucideIcon="repeat-2" class="size-4" [class.animate-spin]="isSyncing"></svg>
@@ -262,21 +283,38 @@
         </button>
 
         <div class="hidden items-center gap-3 border-l border-slate-200 pl-4 sm:flex dark:border-slate-800">
-          <a routerLink="/profile" class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white dark:hover:bg-slate-900" aria-label="Open profile">
-            <div class="text-right">
-              <p class="text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
-              <p class="text-xs text-slate-500 dark:text-slate-400">{{ activeCompanyName() }}</p>
-            </div>
-            <div class="flex size-10 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">{{ initials() }}</div>
-          </a>
-          <button
-            type="button"
-            class="flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label="Log out"
-            (click)="logout()"
-          >
-            <svg lucideIcon="log-out" class="size-4"></svg>
-          </button>
+          @if (user()) {
+            <a routerLink="/profile" class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white dark:hover:bg-slate-900" aria-label="Open profile">
+              <div class="text-right">
+                <p class="text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ activeCompanyName() }}</p>
+              </div>
+              <div class="flex size-10 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">{{ initials() }}</div>
+            </a>
+            <button
+              type="button"
+              class="flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              aria-label="Log out"
+              [disabled]="isLoggingOut"
+              (click)="logout()"
+            >
+              <svg lucideIcon="log-out" class="size-4"></svg>
+            </button>
+          } @else {
+            <a
+              routerLink="/login"
+              [queryParams]="{ intent: 'signin' }"
+              class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Sign in
+            </a>
+            <a
+              routerLink="/register"
+              class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+            >
+              Sign up
+            </a>
+          }
         </div>
       </div>
     </header>

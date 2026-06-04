@@ -29,6 +29,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   isCompanySwitcherOpen = false;
   isMobileMenuOpen = false;
   isRetryingProfileSync = false;
+  isLoggingOut = false;
   isSwitchingCompany = false;
   isSyncing = false;
   toastMessage = '';
@@ -39,6 +40,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   private readonly permissionService = inject(PermissionService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
+  readonly user = toSignal(this.authService.user$, { initialValue: this.authService.currentUser });
   readonly profileSyncError = toSignal(this.authService.profileSyncError$, { initialValue: '' });
   readonly memberships = toSignal(this.permissionService.memberships$, { initialValue: [] as CompanyMembership[] });
   readonly activeCompanyId = toSignal(this.permissionService.activeCompanyId$, { initialValue: null });
@@ -111,7 +113,19 @@ export class AppShellComponent implements OnInit, OnDestroy {
   }
 
   async logout(): Promise<void> {
-    await this.authService.logout();
+    if (this.isLoggingOut) {
+      return;
+    }
+
+    this.isLoggingOut = true;
+    this.closeMobileMenu();
+    this.closeCompanySwitcher();
+
+    try {
+      await this.authService.logout();
+    } finally {
+      this.isLoggingOut = false;
+    }
   }
 
   async selectActiveCompany(companyId: string): Promise<void> {

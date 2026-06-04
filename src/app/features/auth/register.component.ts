@@ -1,5 +1,6 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideDynamicIcon } from '@lucide/angular';
@@ -19,6 +20,7 @@ const RETURNING_USER_STORAGE_KEY = 'startup-expense-os-auth-seen';
 })
 export class RegisterComponent implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
   private readonly inviteService = inject(InviteService);
   private readonly platformId = inject(PLATFORM_ID);
@@ -40,10 +42,19 @@ export class RegisterComponent implements OnInit {
   isInviteLoading = false;
   isSubmitting = false;
   setupReason = '';
+  private isRedirectingAuthenticatedUser = false;
 
   ngOnInit(): void {
     this.inviteToken = this.readInviteToken();
     this.prefillFromQuery();
+
+    this.authService.user$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((user) => {
+        if (user && !this.isInviteFlow && this.setupReason !== 'setup') {
+          void this.redirectAuthenticatedUser();
+        }
+      });
 
     if (this.inviteToken) {
       this.form.controls.companyName.disable();
@@ -208,6 +219,19 @@ export class RegisterComponent implements OnInit {
     } catch {
       // Storage can be disabled in private or locked-down browsers.
     }
+  }
+
+  private async redirectAuthenticatedUser(): Promise<void> {
+    if (this.isRedirectingAuthenticatedUser) {
+      return;
+    }
+
+    this.isRedirectingAuthenticatedUser = true;
+    this.errorMessage = '';
+    this.rememberReturningUser();
+    this.clearStoredInvite();
+
+    await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
   }
 }
 
