@@ -40,8 +40,30 @@ export interface RegisterCredentials {
 }
 
 interface ProfileSyncOverrides extends Partial<Pick<UserProfile, 'companyName' | 'name'>> {
+  allowWorkspaceCreation?: boolean;
   includeCreatedAt?: boolean;
   inviteToken?: string | null;
+}
+
+export class MissingWorkspaceProfileError extends Error {
+  readonly code = 'missing-workspace-profile';
+
+  constructor(email?: string | null) {
+    super(
+      email
+        ? `No company workspace profile exists for ${email}. Create or join a workspace to continue.`
+        : 'No company workspace profile exists for this account. Create or join a workspace to continue.',
+    );
+    this.name = 'MissingWorkspaceProfileError';
+  }
+}
+
+export function isMissingWorkspaceProfileError(error: unknown): boolean {
+  const value = error as { code?: string; message?: string; name?: string } | undefined;
+
+  return value?.code === 'missing-workspace-profile'
+    || value?.name === 'MissingWorkspaceProfileError'
+    || Boolean(value?.message?.toLowerCase().includes('no company workspace profile exists'));
 }
 
 const AUTH_TIMEOUT_MS = 15000;
@@ -146,6 +168,7 @@ export class AuthService {
       ).catch((error) => this.profileSyncErrorSubject.next(readableFirebaseError(error)));
 
       await this.ensureProfileAfterAuth(result.user, {
+        allowWorkspaceCreation: true,
         companyName: credentials.companyName,
         includeCreatedAt: true,
         inviteToken,
@@ -168,8 +191,15 @@ export class AuthService {
         'Cloud sign-in is taking too long. Check your connection and sign-in settings.',
       );
 
-      await this.ensureProfileAfterAuth(result.user, { includeCreatedAt: true, inviteToken: resolvedInviteToken });
+      await this.ensureProfileAfterAuth(result.user, {
+        allowWorkspaceCreation: false,
+        includeCreatedAt: true,
+        inviteToken: resolvedInviteToken,
+      });
       this.clearPendingInviteToken(resolvedInviteToken);
+    } catch (error) {
+      await this.signOutIfMissingWorkspaceProfile(error);
+      throw error;
     } finally {
       this.isHandlingExplicitAuthFlow = false;
     }
@@ -178,6 +208,7 @@ export class AuthService {
   async loginWithGoogle(
     inviteToken?: string | null,
     profileOverrides: Partial<Pick<UserProfile, 'companyName' | 'name'>> = {},
+    options: { allowWorkspaceCreation?: boolean } = {},
   ): Promise<void> {
     const resolvedInviteToken = this.resolveInviteToken(inviteToken);
     this.isHandlingExplicitAuthFlow = true;
@@ -199,12 +230,16 @@ export class AuthService {
       }
 
       await this.ensureProfileAfterAuth(result.user, {
+        allowWorkspaceCreation: Boolean(options.allowWorkspaceCreation),
         companyName: profileOverrides.companyName,
         includeCreatedAt: true,
         inviteToken: resolvedInviteToken,
         name: profileOverrides.name?.trim() || undefined,
       });
       this.clearPendingInviteToken(resolvedInviteToken);
+    } catch (error) {
+      await this.signOutIfMissingWorkspaceProfile(error);
+      throw error;
     } finally {
       this.isHandlingExplicitAuthFlow = false;
     }
@@ -252,6 +287,10 @@ export class AuthService {
       } catch (error) {
         lastError = error;
 
+        if (isMissingWorkspaceProfileError(error)) {
+          throw error;
+        }
+
         if (attempt < attempts) {
           await wait(attempt * 500);
         }
@@ -270,7 +309,7 @@ export class AuthService {
     try {
       await this.ensureUserProfileWithRetry(user, overrides);
     } catch (error) {
-      if (overrides.inviteToken) {
+      if (overrides.inviteToken || isMissingWorkspaceProfileError(error)) {
         throw error;
       }
 
@@ -316,6 +355,11 @@ export class AuthService {
     }
 
     const existingCompanyId = existingData?.activeCompanyId ?? existingData?.defaultCompanyId;
+
+    if (!existingCompanyId && !overrides.allowWorkspaceCreation) {
+      throw new MissingWorkspaceProfileError(user.email);
+    }
+
     const companyRef = existingCompanyId
       ? doc(this.firestore, `companies/${existingCompanyId}`)
       : doc(collection(this.firestore, 'companies'));
@@ -324,7 +368,9 @@ export class AuthService {
       : null;
     const shouldCreateCompany = !existingCompanyId || !existingCompany?.exists();
     const companyId = existingCompanyId ?? companyRef.id;
-    const companyName = overrides.companyName ?? existingData?.companyName ?? `${name}'s Company`;
+    const companyName = existingCompanyId
+      ? existingData?.companyName ?? overrides.companyName ?? `${name}'s Company`
+      : overrides.companyName ?? existingData?.companyName ?? `${name}'s Company`;
     const role = normalizeRole(existingData?.role, 'founder');
     const profile: Record<string, unknown> = {
       uid: user.uid,
@@ -401,10 +447,24 @@ export class AuthService {
   ): Promise<void> {
     try {
       await this.ensureUserProfileWithRetry(user, overrides);
-    } catch {
+    } catch (error) {
+      if (isMissingWorkspaceProfileError(error)) {
+        await this.signOutIfMissingWorkspaceProfile(error);
+        await this.router.navigate(['/register'], { queryParams: { reason: 'setup' }, replaceUrl: true });
+        return;
+      }
+
       // Auth should not strand the user if profile sync is temporarily unavailable.
       // The shell shows profileSyncError$ and any later cloud write will retry against the same UID.
     }
+  }
+
+  private async signOutIfMissingWorkspaceProfile(error: unknown): Promise<void> {
+    if (!isMissingWorkspaceProfileError(error)) {
+      return;
+    }
+
+    await this.runInFirebaseContext(() => signOut(this.auth)).catch(() => undefined);
   }
 
   private async acceptInviteForUser(

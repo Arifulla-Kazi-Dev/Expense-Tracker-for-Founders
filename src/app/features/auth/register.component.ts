@@ -39,9 +39,11 @@ export class RegisterComponent implements OnInit {
   inviteToken = '';
   isInviteLoading = false;
   isSubmitting = false;
+  setupReason = '';
 
   ngOnInit(): void {
     this.inviteToken = this.readInviteToken();
+    this.prefillFromQuery();
 
     if (this.inviteToken) {
       this.form.controls.companyName.disable();
@@ -123,6 +125,8 @@ export class RegisterComponent implements OnInit {
       await this.authService.loginWithGoogle(this.currentInviteToken(), {
         companyName: formValue.companyName,
         name: formValue.name,
+      }, {
+        allowWorkspaceCreation: true,
       });
       this.rememberReturningUser();
       this.clearStoredInvite();
@@ -176,6 +180,17 @@ export class RegisterComponent implements OnInit {
   private clearStoredInvite(): void {
     if (this.isBrowser) {
       sessionStorage.removeItem('inviteToken');
+    }
+  }
+
+  private prefillFromQuery(): void {
+    const email = this.route.snapshot.queryParamMap.get('email')?.trim();
+    const reason = this.route.snapshot.queryParamMap.get('reason')?.trim() ?? '';
+
+    this.setupReason = reason;
+
+    if (email) {
+      this.form.controls.email.setValue(email);
     }
   }
 

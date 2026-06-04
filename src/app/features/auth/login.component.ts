@@ -4,7 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideDynamicIcon } from '@lucide/angular';
 
-import { AuthService } from '../../core/services/auth.service';
+import { AuthService, isMissingWorkspaceProfileError } from '../../core/services/auth.service';
 
 const RETURNING_USER_STORAGE_KEY = 'startup-expense-os-auth-seen';
 const SIGNIN_INTENT = 'signin';
@@ -31,9 +31,11 @@ export class LoginComponent implements OnInit {
   errorMessage = '';
   inviteToken = '';
   isSubmitting = false;
+  showSignupPrompt = false;
 
   ngOnInit(): void {
     this.inviteToken = this.readInviteToken();
+    this.prefillEmailFromQuery();
 
     if (this.shouldSendFirstVisitToRegister()) {
       void this.router.navigate(['/register'], { replaceUrl: true });
@@ -52,6 +54,7 @@ export class LoginComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
+    this.showSignupPrompt = false;
 
     try {
       await this.authService.login(this.form.controls.email.value, this.form.controls.password.value, this.currentInviteToken());
@@ -59,6 +62,12 @@ export class LoginComponent implements OnInit {
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
+      if (isMissingWorkspaceProfileError(error)) {
+        await this.redirectToRegister();
+        return;
+      }
+
+      this.showSignupPrompt = shouldOfferSignup(error);
       this.errorMessage = authErrorMessage(error);
     } finally {
       this.isSubmitting = false;
@@ -72,6 +81,7 @@ export class LoginComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
+    this.showSignupPrompt = false;
 
     try {
       await this.authService.loginWithGoogle(this.currentInviteToken());
@@ -79,10 +89,31 @@ export class LoginComponent implements OnInit {
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
+      if (isMissingWorkspaceProfileError(error)) {
+        await this.redirectToRegister();
+        return;
+      }
+
+      this.showSignupPrompt = shouldOfferSignup(error);
       this.errorMessage = authErrorMessage(error);
     } finally {
       this.isSubmitting = false;
     }
+  }
+
+  signupQueryParams(): Record<string, string> | null {
+    const email = this.form.controls.email.value.trim();
+    const queryParams: Record<string, string> = {};
+
+    if (this.isInviteFlow) {
+      queryParams['inviteToken'] = this.inviteToken;
+    }
+
+    if (email) {
+      queryParams['email'] = email;
+    }
+
+    return Object.keys(queryParams).length ? queryParams : null;
   }
 
   private readInviteToken(): string {
@@ -101,6 +132,31 @@ export class LoginComponent implements OnInit {
     if (this.isBrowser) {
       sessionStorage.removeItem('inviteToken');
     }
+  }
+
+  private prefillEmailFromQuery(): void {
+    const email = this.route.snapshot.queryParamMap.get('email')?.trim();
+
+    if (email) {
+      this.form.controls.email.setValue(email);
+    }
+  }
+
+  private async redirectToRegister(): Promise<void> {
+    const queryParams: Record<string, string> = {
+      reason: 'setup',
+    };
+    const email = this.form.controls.email.value.trim();
+
+    if (email) {
+      queryParams['email'] = email;
+    }
+
+    if (this.inviteToken) {
+      queryParams['inviteToken'] = this.inviteToken;
+    }
+
+    await this.router.navigate(['/register'], { queryParams, replaceUrl: true });
   }
 
   private currentInviteToken(): string | null {
@@ -134,10 +190,33 @@ export class LoginComponent implements OnInit {
 
 function authErrorMessage(error: unknown): string {
   if (error instanceof Error) {
+    const normalized = `${(error as { code?: string }).code ?? ''} ${error.message}`.toLowerCase();
+
+    if (normalized.includes('invalid-credential') || normalized.includes('wrong-password')) {
+      return 'Those sign-in details did not match a workspace account. Try again, reset your password, or create a workspace account.';
+    }
+
+    if (normalized.includes('user-not-found')) {
+      return 'No workspace account exists for this email yet. Create an account to continue.';
+    }
+
+    if (normalized.includes('popup-closed') || normalized.includes('popup closed')) {
+      return 'Google Sign-In was closed before it finished.';
+    }
+
     return cleanBackendTerms(error.message);
   }
 
   return 'Unable to sign in. Please check your credentials and try again.';
+}
+
+function shouldOfferSignup(error: unknown): boolean {
+  const value = error as { code?: string; message?: string } | undefined;
+  const normalized = `${value?.code ?? ''} ${value?.message ?? ''}`.toLowerCase();
+
+  return normalized.includes('invalid-credential')
+    || normalized.includes('user-not-found')
+    || normalized.includes('no company workspace profile exists');
 }
 
 function cleanBackendTerms(message: string): string {
