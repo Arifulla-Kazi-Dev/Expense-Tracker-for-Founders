@@ -309,6 +309,9 @@ export class AuthService {
         name,
         Boolean(overrides.includeCreatedAt),
       );
+      await this.syncAcceptedInviteMemberships(user, existingData, name).catch((error) => {
+        this.profileSyncErrorSubject.next(`Profile synced. Accepted invite membership backfill skipped: ${readableFirebaseError(error)}`);
+      });
       return;
     }
 
@@ -386,6 +389,9 @@ export class AuthService {
 
     await this.migrateLegacyLedgerData(user.uid, companyId, existingData).catch((error) => {
       this.profileSyncErrorSubject.next(`Profile synced. Legacy ledger migration skipped: ${readableFirebaseError(error)}`);
+    });
+    await this.syncAcceptedInviteMemberships(user, existingData, name).catch((error) => {
+      this.profileSyncErrorSubject.next(`Profile synced. Accepted invite membership backfill skipped: ${readableFirebaseError(error)}`);
     });
   }
 
@@ -567,6 +573,71 @@ export class AuthService {
 
     const snapshot = snapshots?.docs[0];
     return snapshot ? ({ ...snapshot.data(), id: snapshot.id } as CompanyInvite) : null;
+  }
+
+  private async syncAcceptedInviteMemberships(
+    user: User,
+    existingData: Partial<UserProfile> | undefined,
+    fallbackName: string,
+  ): Promise<void> {
+    const snapshots = await this.runInFirebaseContext(() =>
+      getDocs(query(
+        collection(this.firestore, 'inviteLookups'),
+        where('acceptedByUid', '==', user.uid),
+        where('status', '==', 'accepted'),
+      )),
+    );
+
+    if (snapshots.empty) {
+      return;
+    }
+
+    const now = serverTimestamp();
+    const name = existingData?.name ?? user.displayName ?? fallbackName;
+    let batch = writeBatch(this.firestore);
+    let writesInBatch = 0;
+
+    const commitIfNeeded = async (force = false): Promise<void> => {
+      if (!force && writesInBatch < 450) {
+        return;
+      }
+
+      if (writesInBatch === 0) {
+        return;
+      }
+
+      await this.runInFirebaseContext(() => batch.commit());
+      batch = writeBatch(this.firestore);
+      writesInBatch = 0;
+    };
+
+    for (const snapshot of snapshots.docs) {
+      const invite = { ...snapshot.data(), id: snapshot.id } as CompanyInvite;
+      const memberPayload = {
+        uid: user.uid,
+        userId: user.uid,
+        companyId: invite.companyId,
+        companyName: invite.companyName,
+        name,
+        email: user.email,
+        photoURL: user.photoURL,
+        role: invite.role,
+        status: 'active',
+        invitedBy: invite.invitedByUid,
+        joinedAt: invite.acceptedAt ?? now,
+        createdAt: existingData?.createdAt ?? invite.acceptedAt ?? now,
+        updatedAt: now,
+        inviteId: invite.inviteId,
+      };
+
+      batch.set(doc(this.firestore, `companies/${invite.companyId}/members/${user.uid}`), memberPayload, { merge: true });
+      batch.set(doc(this.firestore, `users/${user.uid}/memberships/${invite.companyId}`), memberPayload, { merge: true });
+      writesInBatch += 2;
+
+      await commitIfNeeded();
+    }
+
+    await commitIfNeeded(true);
   }
 
   private async migrateLegacyLedgerData(
