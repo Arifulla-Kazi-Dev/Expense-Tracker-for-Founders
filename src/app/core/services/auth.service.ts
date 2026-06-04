@@ -580,6 +580,10 @@ export class AuthService {
     existingData: Partial<UserProfile> | undefined,
     fallbackName: string,
   ): Promise<void> {
+    if (existingData?.acceptedInviteMembershipsBackfilledAt) {
+      return;
+    }
+
     const snapshots = await this.runInFirebaseContext(() =>
       getDocs(query(
         collection(this.firestore, 'inviteLookups'),
@@ -587,12 +591,25 @@ export class AuthService {
         where('status', '==', 'accepted'),
       )),
     );
+    const now = serverTimestamp();
+
+    const markBackfilled = async (): Promise<void> => {
+      const batch = writeBatch(this.firestore);
+
+      batch.set(doc(this.firestore, `users/${user.uid}`), {
+        uid: user.uid,
+        acceptedInviteMembershipsBackfilledAt: now,
+        updatedAt: now,
+      }, { merge: true });
+
+      await this.runInFirebaseContext(() => batch.commit());
+    };
 
     if (snapshots.empty) {
+      await markBackfilled();
       return;
     }
 
-    const now = serverTimestamp();
     const name = existingData?.name ?? user.displayName ?? fallbackName;
     let batch = writeBatch(this.firestore);
     let writesInBatch = 0;
@@ -636,6 +653,13 @@ export class AuthService {
 
       await commitIfNeeded();
     }
+
+    batch.set(doc(this.firestore, `users/${user.uid}`), {
+      uid: user.uid,
+      acceptedInviteMembershipsBackfilledAt: now,
+      updatedAt: now,
+    }, { merge: true });
+    writesInBatch += 1;
 
     await commitIfNeeded(true);
   }

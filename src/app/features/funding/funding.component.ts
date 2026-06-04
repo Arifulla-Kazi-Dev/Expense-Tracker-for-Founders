@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
@@ -16,13 +16,21 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './funding.component.html',
 })
-export class FundingComponent {
+export class FundingComponent implements OnDestroy {
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
+  private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
   isBusy = false;
+  toastMessage = '';
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   get feature(): FeaturePageConfig {
     const records = this.funding();
@@ -74,11 +82,14 @@ export class FundingComponent {
       notes: textValue(event.value, 'notes'),
     };
 
-    await this.runMutation(() => event.id ? this.fundingService.update(event.id, payload) : this.fundingService.create(payload));
+    await this.runMutation(
+      () => event.id ? this.fundingService.update(event.id, payload) : this.fundingService.create(payload),
+      event.id ? 'Funding source updated' : 'Funding source saved',
+    );
   }
 
   async delete(id: string): Promise<void> {
-    await this.runMutation(() => this.fundingService.delete(id));
+    await this.runMutation(() => this.fundingService.delete(id), 'Funding source deleted');
   }
 
   acknowledgeRealtime(): void {
@@ -89,16 +100,29 @@ export class FundingComponent {
     return this.permissionService.can('manageFunding');
   }
 
-  private async runMutation(action: () => Promise<unknown>): Promise<void> {
+  private async runMutation(action: () => Promise<unknown>, successMessage: string): Promise<void> {
     this.isBusy = true;
     this.errorMessage = '';
 
     try {
       await action();
+      this.showToast(successMessage);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to save funding record.';
     } finally {
       this.isBusy = false;
     }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2400);
   }
 }

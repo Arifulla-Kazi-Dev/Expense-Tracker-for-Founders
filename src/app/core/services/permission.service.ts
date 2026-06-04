@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, collectionSnapshots, doc, docData, serverTimestamp, setDoc } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
-import { Company, CompanyMember, CompanyMembership } from '../models/company.model';
+import { CompanyMember, CompanyMembership } from '../models/company.model';
 import { Permission, UserRole, effectivePermissions, hasPermission, roleDisplayName } from '../models/role.model';
 import { UserProfile } from '../models/user-profile.model';
 import { AuthService } from './auth.service';
@@ -32,7 +32,6 @@ export class PermissionService {
             .map((snapshot) => normalizeMembership(uid, snapshot.id, snapshot.data()))
             .filter((membership) => membership.status === 'active'),
         ),
-        switchMap((memberships) => this.withCompanyNames(memberships)),
         catchError((error) => {
           console.error('Memberships load failed', error);
           return of([] as CompanyMembership[]);
@@ -192,24 +191,6 @@ export class PermissionService {
     }
 
     return memberships[0]?.companyId ?? profile?.activeCompanyId ?? profile?.defaultCompanyId ?? null;
-  }
-
-  private withCompanyNames(memberships: CompanyMembership[]): Observable<CompanyMembership[]> {
-    if (!memberships.length) {
-      return of([]);
-    }
-
-    return combineLatest(
-      memberships.map((membership) =>
-        (docData(doc(this.firestore, `companies/${membership.companyId}`), { idField: 'companyId' }) as Observable<Company>).pipe(
-          map((company) => ({
-            ...membership,
-            companyName: company?.companyName ?? membership.companyName,
-          })),
-          catchError(() => of(membership)),
-        ),
-      ),
-    );
   }
 
   private readStoredActiveCompanyId(uid: string | null): string | null {

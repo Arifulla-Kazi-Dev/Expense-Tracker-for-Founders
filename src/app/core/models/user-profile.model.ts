@@ -16,4 +16,5 @@ export interface UserProfile {
   updatedAt: FirestoreDate;
   lastLoginAt: FirestoreDate;
   legacyDataMigratedAt?: FirestoreDate;
+  acceptedInviteMembershipsBackfilledAt?: FirestoreDate;
 }

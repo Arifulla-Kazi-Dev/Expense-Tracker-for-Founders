@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { EXPENSE_CATEGORIES, EXPENSE_TYPES, Expense, ExpenseInput, PAYMENT_STATUSES } from '../../core/models/expense.model';
@@ -18,15 +18,23 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './expenses.component.html',
 })
-export class ExpensesComponent {
+export class ExpensesComponent implements OnDestroy {
   private readonly expenseService = inject(ExpenseService);
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly expenses = toSignal(this.expenseService.list(), { initialValue: [] as Expense[] });
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
+  private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
   isBusy = false;
+  toastMessage = '';
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   get feature(): FeaturePageConfig {
     const records = this.expenses();
@@ -95,11 +103,14 @@ export class ExpensesComponent {
       ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
-    await this.runMutation(() => event.id ? this.expenseService.update(event.id, payload) : this.expenseService.create(payload));
+    await this.runMutation(
+      () => event.id ? this.expenseService.update(event.id, payload) : this.expenseService.create(payload),
+      event.id ? 'Expense updated' : 'Expense saved',
+    );
   }
 
   async delete(id: string): Promise<void> {
-    await this.runMutation(() => this.expenseService.delete(id));
+    await this.runMutation(() => this.expenseService.delete(id), 'Expense deleted');
   }
 
   acknowledgeRealtime(): void {
@@ -110,16 +121,29 @@ export class ExpensesComponent {
     return this.permissionService.can('manageExpenses');
   }
 
-  private async runMutation(action: () => Promise<unknown>): Promise<void> {
+  private async runMutation(action: () => Promise<unknown>, successMessage: string): Promise<void> {
     this.isBusy = true;
     this.errorMessage = '';
 
     try {
       await action();
+      this.showToast(successMessage);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to save expense record.';
     } finally {
       this.isBusy = false;
     }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2400);
   }
 }

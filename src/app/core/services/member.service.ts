@@ -4,7 +4,6 @@ import {
   collection,
   collectionSnapshots,
   doc,
-  getDoc,
   orderBy,
   query,
   serverTimestamp,
@@ -45,7 +44,7 @@ export class MemberService {
     return this.permissionService.can('manageMembers');
   }
 
-  async changeRole(uid: string, role: UserRole): Promise<void> {
+  async changeRole(member: CompanyMember, role: UserRole): Promise<void> {
     if (role === 'founder' && this.permissionService.currentRole !== 'founder') {
       throw new Error('Only the founder can assign founder ownership.');
     }
@@ -55,38 +54,38 @@ export class MemberService {
       role,
       updatedAt: serverTimestamp(),
     };
-    const membershipPayload = await this.membershipPayload(uid, update);
+    const membershipPayload = this.membershipPayload(member, update);
 
-    batch.update(this.memberDoc(uid), update);
-    batch.set(this.membershipDoc(uid), membershipPayload, { merge: true });
+    batch.update(this.memberDoc(member.uid), update);
+    batch.set(this.membershipDoc(member.uid), membershipPayload, { merge: true });
 
     await batch.commit();
   }
 
-  async suspend(uid: string): Promise<void> {
+  async suspend(member: CompanyMember): Promise<void> {
     const batch = writeBatch(this.firestore);
     const update = {
       status: 'suspended',
       updatedAt: serverTimestamp(),
     };
-    const membershipPayload = await this.membershipPayload(uid, update);
+    const membershipPayload = this.membershipPayload(member, update);
 
-    batch.update(this.memberDoc(uid), update);
-    batch.set(this.membershipDoc(uid), membershipPayload, { merge: true });
+    batch.update(this.memberDoc(member.uid), update);
+    batch.set(this.membershipDoc(member.uid), membershipPayload, { merge: true });
 
     await batch.commit();
   }
 
-  async updatePermissionOverrides(uid: string, permissionOverrides: PermissionOverrides): Promise<void> {
+  async updatePermissionOverrides(member: CompanyMember, permissionOverrides: PermissionOverrides): Promise<void> {
     const batch = writeBatch(this.firestore);
     const update = {
       permissionOverrides,
       updatedAt: serverTimestamp(),
     };
-    const membershipPayload = await this.membershipPayload(uid, update);
+    const membershipPayload = this.membershipPayload(member, update);
 
-    batch.update(this.memberDoc(uid), update);
-    batch.set(this.membershipDoc(uid), membershipPayload, { merge: true });
+    batch.update(this.memberDoc(member.uid), update);
+    batch.set(this.membershipDoc(member.uid), membershipPayload, { merge: true });
 
     await batch.commit();
   }
@@ -111,25 +110,23 @@ export class MemberService {
     return doc(this.firestore, `users/${uid}/memberships/${this.companyService.requireActiveCompanyId()}`);
   }
 
-  private async membershipPayload(uid: string, update: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private membershipPayload(member: CompanyMember, update: Record<string, unknown>): Record<string, unknown> {
     const companyId = this.companyService.requireActiveCompanyId();
-    const snapshot = await getDoc(this.memberDoc(uid));
-    const data = snapshot.data() as Partial<CompanyMember> | undefined;
 
     return {
-      uid,
-      userId: data?.userId ?? uid,
+      uid: member.uid,
+      userId: member.userId ?? member.uid,
       companyId,
-      companyName: data?.companyName ?? '',
-      name: data?.name ?? 'Member',
-      email: data?.email ?? null,
-      photoURL: data?.photoURL ?? null,
-      role: data?.role ?? 'team-member',
-      status: data?.status ?? 'active',
-      invitedBy: data?.invitedBy ?? '',
-      permissionOverrides: data?.permissionOverrides ?? {},
-      joinedAt: data?.joinedAt ?? serverTimestamp(),
-      createdAt: data?.createdAt ?? serverTimestamp(),
+      companyName: member.companyName ?? '',
+      name: member.name ?? 'Member',
+      email: member.email ?? null,
+      photoURL: member.photoURL ?? null,
+      role: member.role ?? 'team-member',
+      status: member.status ?? 'active',
+      invitedBy: member.invitedBy ?? '',
+      permissionOverrides: member.permissionOverrides ?? {},
+      joinedAt: member.joinedAt ?? serverTimestamp(),
+      createdAt: member.createdAt ?? serverTimestamp(),
       ...update,
     };
   }

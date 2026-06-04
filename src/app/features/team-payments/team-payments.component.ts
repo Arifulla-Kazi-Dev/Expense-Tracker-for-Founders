@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { PAYMENT_STATUSES } from '../../core/models/expense.model';
@@ -19,15 +19,23 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './team-payments.component.html',
 })
-export class TeamPaymentsComponent {
+export class TeamPaymentsComponent implements OnDestroy {
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly teamPaymentService = inject(TeamPaymentService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly teamPayments = toSignal(this.teamPaymentService.list(), { initialValue: [] as TeamPayment[] });
+  private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
   isBusy = false;
+  toastMessage = '';
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   get feature(): FeaturePageConfig {
     const records = this.teamPayments();
@@ -106,11 +114,14 @@ export class TeamPaymentsComponent {
       ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
-    await this.runMutation(() => event.id ? this.teamPaymentService.update(event.id, payload) : this.teamPaymentService.create(payload));
+    await this.runMutation(
+      () => event.id ? this.teamPaymentService.update(event.id, payload) : this.teamPaymentService.create(payload),
+      event.id ? 'Team payment updated' : 'Team payment saved',
+    );
   }
 
   async delete(id: string): Promise<void> {
-    await this.runMutation(() => this.teamPaymentService.delete(id));
+    await this.runMutation(() => this.teamPaymentService.delete(id), 'Team payment deleted');
   }
 
   acknowledgeRealtime(): void {
@@ -121,17 +132,30 @@ export class TeamPaymentsComponent {
     return this.permissionService.can('manageTeamPayments');
   }
 
-  private async runMutation(action: () => Promise<unknown>): Promise<void> {
+  private async runMutation(action: () => Promise<unknown>, successMessage: string): Promise<void> {
     this.isBusy = true;
     this.errorMessage = '';
 
     try {
       await action();
+      this.showToast(successMessage);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to save team payment.';
     } finally {
       this.isBusy = false;
     }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2400);
   }
 
   private paymentType(item: TeamPayment): TeamPaymentInput['paymentType'] {

@@ -1,7 +1,14 @@
-import { ApplicationConfig, inject, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, PLATFORM_ID, inject, provideZoneChangeDetection } from '@angular/core';
 import { FirebaseApp, provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { getAuth, provideAuth } from '@angular/fire/auth';
-import { initializeFirestore, provideFirestore } from '@angular/fire/firestore';
+import {
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  provideFirestore,
+} from '@angular/fire/firestore';
+import { isPlatformBrowser } from '@angular/common';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 
@@ -16,15 +23,20 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),
     provideAuth(() => getAuth()),
-    provideFirestore(() =>
-      initializeFirestore(
+    provideFirestore(() => {
+      const platformId = inject(PLATFORM_ID);
+
+      return initializeFirestore(
         inject(FirebaseApp),
         {
           experimentalForceLongPolling: true,
+          localCache: isPlatformBrowser(platformId)
+            ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            : memoryLocalCache(),
         },
         environment.firestoreDatabaseId,
-      ),
-    ),
+      );
+    }),
     ...lucideIconProviders,
   ],
 };

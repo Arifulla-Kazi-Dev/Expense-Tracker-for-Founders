@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { BILLING_CYCLES, RecurringCost, RecurringCostInput } from '../../core/models/recurring-cost.model';
@@ -19,15 +19,23 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './recurring-costs.component.html',
 })
-export class RecurringCostsComponent {
+export class RecurringCostsComponent implements OnDestroy {
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly recurringCostService = inject(RecurringCostService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly recurringCosts = toSignal(this.recurringCostService.list(), { initialValue: [] as RecurringCost[] });
+  private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
   isBusy = false;
+  toastMessage = '';
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   get feature(): FeaturePageConfig {
     const records = this.recurringCosts();
@@ -86,11 +94,14 @@ export class RecurringCostsComponent {
       ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
-    await this.runMutation(() => event.id ? this.recurringCostService.update(event.id, payload) : this.recurringCostService.create(payload));
+    await this.runMutation(
+      () => event.id ? this.recurringCostService.update(event.id, payload) : this.recurringCostService.create(payload),
+      event.id ? 'Recurring cost updated' : 'Recurring cost saved',
+    );
   }
 
   async delete(id: string): Promise<void> {
-    await this.runMutation(() => this.recurringCostService.delete(id));
+    await this.runMutation(() => this.recurringCostService.delete(id), 'Recurring cost deleted');
   }
 
   acknowledgeRealtime(): void {
@@ -101,17 +112,30 @@ export class RecurringCostsComponent {
     return this.permissionService.can('manageRecurringCosts');
   }
 
-  private async runMutation(action: () => Promise<unknown>): Promise<void> {
+  private async runMutation(action: () => Promise<unknown>, successMessage: string): Promise<void> {
     this.isBusy = true;
     this.errorMessage = '';
 
     try {
       await action();
+      this.showToast(successMessage);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to save recurring cost.';
     } finally {
       this.isBusy = false;
     }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2400);
   }
 }
 

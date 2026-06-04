@@ -28,6 +28,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   @Input() errorMessage = '';
   @Input() isBusy = false;
   @Input() canEdit = true;
+  @Input() toastMessage = '';
 
   @Output() saveRecord = new EventEmitter<FeatureSaveEvent>();
   @Output() deleteRecord = new EventEmitter<string>();
@@ -145,7 +146,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   isCardSelectField(field: FeatureFormField): boolean {
-    return field.type === 'select' && (field.display === 'cards' || this.isCategoryField(field));
+    return field.type === 'select' && field.display !== 'select';
   }
 
   isSelectedOption(field: FeatureFormField, option: string | FeatureFormOption): boolean {
@@ -181,7 +182,33 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   optionDetail(option: string | FeatureFormOption): string {
-    return typeof option === 'string' ? '' : option.detail ?? '';
+    if (typeof option !== 'string') {
+      return option.detail ?? '';
+    }
+
+    const value = option.toLowerCase();
+
+    if (value === 'paid') {
+      return 'Cleared spend';
+    }
+
+    if (value === 'pending') {
+      return 'Still payable';
+    }
+
+    if (value.includes('partial')) {
+      return 'Some amount paid';
+    }
+
+    if (value.includes('recurring')) {
+      return 'Repeats over time';
+    }
+
+    if (value.includes('one-time')) {
+      return 'Single payment';
+    }
+
+    return '';
   }
 
   optionIcon(option: string | FeatureFormOption): string {
@@ -190,6 +217,26 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     }
 
     const value = this.optionLabel(option).toLowerCase();
+
+    if (value === 'paid') {
+      return 'check-circle-2';
+    }
+
+    if (value === 'pending') {
+      return 'calendar-clock';
+    }
+
+    if (value.includes('partial')) {
+      return 'circle-gauge';
+    }
+
+    if (value.includes('monthly') || value.includes('quarterly') || value.includes('yearly') || value.includes('recurring')) {
+      return 'repeat-2';
+    }
+
+    if (value.includes('one-time')) {
+      return 'badge-indian-rupee';
+    }
 
     if (value.includes('legal') || value.includes('company') || value.includes('startup')) {
       return 'building-2';
@@ -211,12 +258,41 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   optionToneClass(option: string | FeatureFormOption): string {
-    const tone = typeof option === 'string' ? 'slate' : option.tone ?? 'slate';
-    return tonePanelClass(tone);
+    return tonePanelClass(this.optionTone(option));
   }
 
   tonePanelClass(tone: Tone): string {
     return tonePanelClass(tone);
+  }
+
+  private optionTone(option: string | FeatureFormOption): Tone {
+    if (typeof option !== 'string') {
+      return option.tone ?? 'slate';
+    }
+
+    const value = option.toLowerCase();
+
+    if (value === 'paid' || value === 'active') {
+      return 'emerald';
+    }
+
+    if (value === 'pending' || value.includes('partial') || value.includes('quarterly')) {
+      return 'amber';
+    }
+
+    if (value.includes('recurring') || value.includes('monthly') || value.includes('yearly')) {
+      return 'sky';
+    }
+
+    if (value.includes('legal') || value.includes('company') || value.includes('startup')) {
+      return 'teal';
+    }
+
+    if (value.includes('marketing') || value.includes('user') || value.includes('brand')) {
+      return 'rose';
+    }
+
+    return 'slate';
   }
 
   badgeClass(status: FeaturePageConfig['rows'][number]['status']): string {

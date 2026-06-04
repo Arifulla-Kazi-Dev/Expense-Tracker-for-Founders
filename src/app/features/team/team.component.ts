@@ -231,7 +231,7 @@ export class TeamComponent implements OnDestroy {
       return;
     }
 
-    await this.runAction(() => this.memberService.changeRole(member.uid, role), 'Member role updated');
+    await this.runAction(() => this.memberService.changeRole(member, role), 'Member role updated');
   }
 
   async toggleMemberPermission(member: CompanyMember, permission: Permission): Promise<void> {
@@ -250,7 +250,7 @@ export class TeamComponent implements OnDestroy {
     }
 
     await this.runAction(
-      () => this.memberService.updatePermissionOverrides(member.uid, overrides),
+      () => this.memberService.updatePermissionOverrides(member, overrides),
       'Member permission updated',
     );
   }
@@ -261,7 +261,7 @@ export class TeamComponent implements OnDestroy {
     }
 
     await this.runAction(
-      () => this.memberService.updatePermissionOverrides(member.uid, {}),
+      () => this.memberService.updatePermissionOverrides(member, {}),
       'Member permissions reset to role defaults',
     );
   }
@@ -277,7 +277,7 @@ export class TeamComponent implements OnDestroy {
       confirmLabel: 'Suspend',
       icon: 'alert-circle',
       tone: 'warning',
-      action: () => this.memberService.suspend(member.uid),
+      action: () => this.memberService.suspend(member),
       successMessage: 'Member suspended',
     };
   }

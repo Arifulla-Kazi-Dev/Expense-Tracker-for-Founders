@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
@@ -14,13 +14,21 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './founder-notes.component.html',
 })
-export class FounderNotesComponent {
+export class FounderNotesComponent implements OnDestroy {
   private readonly founderNoteService = inject(FounderNoteService);
   private readonly permissionService = inject(PermissionService);
   private readonly notes = toSignal(this.founderNoteService.list(), { initialValue: [] as FounderNote[] });
+  private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
   isBusy = false;
+  toastMessage = '';
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   get feature(): FeaturePageConfig {
     const records = this.notes();
@@ -79,11 +87,14 @@ export class FounderNotesComponent {
       notes: textValue(event.value, 'notes'),
     };
 
-    await this.runMutation(() => event.id ? this.founderNoteService.update(event.id, payload) : this.founderNoteService.create(payload));
+    await this.runMutation(
+      () => event.id ? this.founderNoteService.update(event.id, payload) : this.founderNoteService.create(payload),
+      event.id ? 'Workspace note updated' : 'Workspace note saved',
+    );
   }
 
   async delete(id: string): Promise<void> {
-    await this.runMutation(() => this.founderNoteService.delete(id));
+    await this.runMutation(() => this.founderNoteService.delete(id), 'Workspace note deleted');
   }
 
   acknowledgeRealtime(): void {
@@ -94,16 +105,29 @@ export class FounderNotesComponent {
     return this.permissionService.can('manageFounderNotes');
   }
 
-  private async runMutation(action: () => Promise<unknown>): Promise<void> {
+  private async runMutation(action: () => Promise<unknown>, successMessage: string): Promise<void> {
     this.isBusy = true;
     this.errorMessage = '';
 
     try {
       await action();
+      this.showToast(successMessage);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to save workspace note.';
     } finally {
       this.isBusy = false;
     }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2400);
   }
 }

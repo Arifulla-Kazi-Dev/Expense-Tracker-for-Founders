@@ -8,7 +8,6 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { mobileNavigationItems, navigationItems } from '../../core/data/navigation.data';
 import { NavigationItem } from '../../core/models/dashboard.models';
 import { CompanyMembership } from '../../core/models/company.model';
-import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
 
@@ -36,7 +35,6 @@ export class AppShellComponent implements OnInit, OnDestroy {
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly authService = inject(AuthService);
-  private readonly dashboardService = inject(DashboardService);
   private readonly permissionService = inject(PermissionService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
@@ -44,7 +42,6 @@ export class AppShellComponent implements OnInit, OnDestroy {
   readonly memberships = toSignal(this.permissionService.memberships$, { initialValue: [] as CompanyMembership[] });
   readonly activeCompanyId = toSignal(this.permissionService.activeCompanyId$, { initialValue: null });
   readonly activeMembership = toSignal(this.permissionService.activeMembership$, { initialValue: null });
-  readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
   private toastTimer?: ReturnType<typeof setTimeout>;
   private syncTimer?: ReturnType<typeof setTimeout>;
 
@@ -171,12 +168,8 @@ export class AppShellComponent implements OnInit, OnDestroy {
     return this.activeMembership()?.companyName || this.profile()?.companyName || 'Company workspace';
   }
 
-  runwayLabel(): string {
-    return this.summary().runwayLabel;
-  }
-
-  runwayProgress(): number {
-    return this.summary().runwayProgress;
+  workspaceAccessLabel(): string {
+    return this.hasMultipleCompanies() ? `${this.memberships().length} workspaces` : 'Active';
   }
 
   showToast(message: string): void {

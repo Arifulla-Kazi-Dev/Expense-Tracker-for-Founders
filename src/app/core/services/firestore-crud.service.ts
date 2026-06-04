@@ -27,7 +27,7 @@ export class FirestoreCrudService {
     return this.permissionService.activeCompanyId$.pipe(
       switchMap((companyId) => {
         if (!companyId) {
-          return this.legacyList<T>(collectionName);
+          return of([] as T[]);
         }
 
         const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
@@ -38,10 +38,9 @@ export class FirestoreCrudService {
               .filter((snapshot) => !snapshot.metadata.hasPendingWrites)
               .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
           ),
-          switchMap((records) => records.length ? of(records) : this.legacyList<T>(collectionName)),
           catchError((error) => {
             console.error('Cloud list failed', error);
-            return this.legacyList<T>(collectionName);
+            return of([] as T[]);
           }),
         );
       }),
@@ -122,25 +121,6 @@ export class FirestoreCrudService {
     return companyId;
   }
 
-  private legacyList<T>(collectionName: string): Observable<T[]> {
-    const uid = this.authService.currentUser?.uid;
-
-    if (!uid) {
-      return of([]);
-    }
-
-    return collectionSnapshots(collection(this.firestore, `users/${uid}/${collectionName}`)).pipe(
-      map((snapshots) =>
-        snapshots
-          .filter((snapshot) => !snapshot.metadata.hasPendingWrites)
-          .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
-      ),
-      catchError((error) => {
-        console.error('Legacy cloud list failed', error);
-        return of([]);
-      }),
-    );
-  }
 }
 
 function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 15000): Promise<T> {

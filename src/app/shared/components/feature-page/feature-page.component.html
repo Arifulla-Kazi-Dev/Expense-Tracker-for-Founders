@@ -304,3 +304,14 @@
     (cancel)="cancelDelete()"
   />
 }
+
+@if (toastMessage) {
+  <div class="fixed bottom-20 left-1/2 z-50 w-[min(92vw,28rem)] -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 lg:bottom-6">
+    <div class="flex items-center gap-3">
+      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-200 dark:ring-teal-400/20">
+        <svg lucideIcon="check-circle-2" class="size-4"></svg>
+      </span>
+      <span>{{ toastMessage }}</span>
+    </div>
+  </div>
+}

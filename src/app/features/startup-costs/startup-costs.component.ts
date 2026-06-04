@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { PAYMENT_STATUSES } from '../../core/models/expense.model';
@@ -19,15 +19,23 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './startup-costs.component.html',
 })
-export class StartupCostsComponent {
+export class StartupCostsComponent implements OnDestroy {
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly startupCostService = inject(StartupCostService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly startupCosts = toSignal(this.startupCostService.list(), { initialValue: [] as StartupCost[] });
+  private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
   isBusy = false;
+  toastMessage = '';
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   get feature(): FeaturePageConfig {
     const records = this.startupCosts();
@@ -89,11 +97,14 @@ export class StartupCostsComponent {
       ...fundingAttribution(this.funding(), textValue(event.value, 'fundingSourceId')),
     };
 
-    await this.runMutation(() => event.id ? this.startupCostService.update(event.id, payload) : this.startupCostService.create(payload));
+    await this.runMutation(
+      () => event.id ? this.startupCostService.update(event.id, payload) : this.startupCostService.create(payload),
+      event.id ? 'Startup cost updated' : 'Startup cost saved',
+    );
   }
 
   async delete(id: string): Promise<void> {
-    await this.runMutation(() => this.startupCostService.delete(id));
+    await this.runMutation(() => this.startupCostService.delete(id), 'Startup cost deleted');
   }
 
   acknowledgeRealtime(): void {
@@ -104,16 +115,29 @@ export class StartupCostsComponent {
     return this.permissionService.can('manageStartupCosts');
   }
 
-  private async runMutation(action: () => Promise<unknown>): Promise<void> {
+  private async runMutation(action: () => Promise<unknown>, successMessage: string): Promise<void> {
     this.isBusy = true;
     this.errorMessage = '';
 
     try {
       await action();
+      this.showToast(successMessage);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to save startup cost.';
     } finally {
       this.isBusy = false;
     }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2400);
   }
 }
