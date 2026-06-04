@@ -238,13 +238,64 @@
                   <div class="grid gap-2">
                     <span class="rounded-full px-2 py-1 text-xs font-semibold ring-1 w-fit" [ngClass]="statusClass(member.status)">{{ member.status }}</span>
                     @if (canChangeMember(member)) {
-                      <select [value]="member.role" class="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900" (change)="changeRole(member, $event)">
-                        @for (role of invitableRoles; track role) {
-                          <option [value]="role">{{ roleLabel(role) }}</option>
+                      <div class="grid gap-2">
+                        <button
+                          type="button"
+                          class="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+                          [disabled]="isBusy"
+                          [attr.aria-expanded]="isRolePickerOpen(member)"
+                          aria-haspopup="listbox"
+                          (click)="toggleRolePicker(member)"
+                        >
+                          <span class="flex min-w-0 items-center gap-3">
+                            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
+                              <svg [lucideIcon]="roleIcon(member.role)" class="size-4"></svg>
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Assigned role</span>
+                              <span class="block truncate text-sm font-semibold">{{ roleLabel(member.role) }}</span>
+                            </span>
+                          </span>
+                          <svg lucideIcon="chevron-down" class="size-4 shrink-0 text-slate-400 transition" [class.rotate-180]="isRolePickerOpen(member)"></svg>
+                        </button>
+
+                        @if (isRolePickerOpen(member)) {
+                          <div class="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-900/70" role="listbox" aria-label="Change member role">
+                            @for (role of rolePickerOptions(member); track role) {
+                              <button
+                                type="button"
+                                class="flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition disabled:cursor-wait disabled:opacity-60"
+                                [ngClass]="roleOptionClass(member, role)"
+                                [disabled]="isBusy"
+                                role="option"
+                                [attr.aria-selected]="role === member.role"
+                                (click)="selectMemberRole(member, role)"
+                              >
+                                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/80 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950/80 dark:text-slate-300 dark:ring-slate-800">
+                                  <svg [lucideIcon]="roleIcon(role)" class="size-4"></svg>
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                  <span class="block truncate text-sm font-semibold">{{ roleLabel(role) }}</span>
+                                  <span class="mt-0.5 block truncate text-xs opacity-70">{{ permissionDescription(role) }}</span>
+                                </span>
+                                @if (role === member.role) {
+                                  <svg lucideIcon="check-circle-2" class="size-4 shrink-0 text-teal-600 dark:text-teal-300"></svg>
+                                }
+                              </button>
+                            }
+                          </div>
                         }
-                      </select>
+                      </div>
                     } @else {
-                      <p class="text-sm font-semibold">{{ roleLabel(member.role) }}</p>
+                      <div class="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
+                          <svg [lucideIcon]="roleIcon(member.role)" class="size-4"></svg>
+                        </span>
+                        <span class="min-w-0">
+                          <span class="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Assigned role</span>
+                          <span class="block truncate text-sm font-semibold">{{ roleLabel(member.role) }}</span>
+                        </span>
+                      </div>
                     }
                   </div>
 

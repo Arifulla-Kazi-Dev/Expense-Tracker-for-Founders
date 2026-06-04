@@ -3,7 +3,7 @@ import { Firestore, collection, collectionSnapshots, doc, docData, serverTimesta
 import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import { CompanyMember, CompanyMembership } from '../models/company.model';
-import { Permission, UserRole, effectivePermissions, hasPermission, roleDisplayName } from '../models/role.model';
+import { Permission, UserRole, effectivePermissions, hasPermission, normalizeUserRole, roleDisplayName } from '../models/role.model';
 import { UserProfile } from '../models/user-profile.model';
 import { AuthService } from './auth.service';
 
@@ -231,7 +231,7 @@ function normalizeMembership(uid: string, companyId: string, value: Record<strin
     name: (value['name'] as string | undefined) ?? 'Member',
     email: (value['email'] as string | null | undefined) ?? null,
     photoURL: (value['photoURL'] as string | null | undefined) ?? null,
-    role: (value['role'] as UserRole | undefined) ?? 'team-member',
+    role: normalizeUserRole(value['role']),
     status: (value['status'] as CompanyMembership['status'] | undefined) ?? 'active',
     invitedBy: (value['invitedBy'] as string | undefined) ?? '',
     joinedAt: value['joinedAt'] as CompanyMembership['joinedAt'],

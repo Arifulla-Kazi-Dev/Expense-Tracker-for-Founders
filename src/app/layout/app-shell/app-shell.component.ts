@@ -26,6 +26,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   globalSearch = '';
   isDarkMode = false;
+  isCompanySwitcherOpen = false;
   isMobileMenuOpen = false;
   isRetryingProfileSync = false;
   isSwitchingCompany = false;
@@ -81,6 +82,19 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   closeMobileMenu(): void {
     this.isMobileMenuOpen = false;
+    this.closeCompanySwitcher();
+  }
+
+  toggleCompanySwitcher(): void {
+    if (!this.hasMultipleCompanies() || this.isSwitchingCompany) {
+      return;
+    }
+
+    this.isCompanySwitcherOpen = !this.isCompanySwitcherOpen;
+  }
+
+  closeCompanySwitcher(): void {
+    this.isCompanySwitcherOpen = false;
   }
 
   simulateSync(): void {
@@ -100,10 +114,9 @@ export class AppShellComponent implements OnInit, OnDestroy {
     await this.authService.logout();
   }
 
-  async changeActiveCompany(event: Event): Promise<void> {
-    const companyId = (event.target as HTMLSelectElement).value;
-
+  async selectActiveCompany(companyId: string): Promise<void> {
     if (!companyId || companyId === this.activeCompanyId() || this.isSwitchingCompany) {
+      this.closeCompanySwitcher();
       return;
     }
 
@@ -113,6 +126,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     try {
       await this.permissionService.setActiveCompany(companyId);
       this.closeMobileMenu();
+      this.closeCompanySwitcher();
       this.showToast(`Switched to ${nextCompanyName}`);
     } catch (error) {
       this.showToast(error instanceof Error ? error.message : 'Unable to switch company');
@@ -156,7 +170,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     return this.permissionService.roleLabel();
   }
 
-  roleLabelFor(role: CompanyMembership['role']): string {
+  roleLabelFor(role: CompanyMembership['role'] | null | undefined): string {
     return this.permissionService.roleLabelFor(role);
   }
 
@@ -166,6 +180,23 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   activeCompanyName(): string {
     return this.activeMembership()?.companyName || this.profile()?.companyName || 'Company workspace';
+  }
+
+  activeCompanyRoleLabel(): string {
+    return this.roleLabelFor(this.activeMembership()?.role ?? this.profile()?.role ?? null);
+  }
+
+  companyInitials(companyName: string): string {
+    return companyName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'CO';
+  }
+
+  isActiveCompany(companyId: string): boolean {
+    return companyId === this.activeCompanyId();
   }
 
   workspaceAccessLabel(): string {

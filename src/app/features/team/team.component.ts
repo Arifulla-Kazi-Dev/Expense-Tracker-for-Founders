@@ -56,6 +56,7 @@ export class TeamComponent implements OnDestroy {
 
   errorMessage = '';
   isBusy = false;
+  rolePickerMemberUid = '';
   pendingConfirm: TeamConfirmAction | null = null;
   toastMessage = '';
 
@@ -224,14 +225,42 @@ export class TeamComponent implements OnDestroy {
     };
   }
 
-  async changeRole(member: CompanyMember, event: Event): Promise<void> {
-    const role = (event.target as HTMLSelectElement).value as UserRole;
-
+  async selectMemberRole(member: CompanyMember, role: UserRole): Promise<void> {
     if (!this.canChangeMember(member) || role === member.role) {
+      this.closeRolePicker();
       return;
     }
 
     await this.runAction(() => this.memberService.changeRole(member, role), 'Member role updated');
+    this.closeRolePicker();
+  }
+
+  toggleRolePicker(member: CompanyMember): void {
+    if (!this.canChangeMember(member) || this.isBusy) {
+      return;
+    }
+
+    this.rolePickerMemberUid = this.rolePickerMemberUid === member.uid ? '' : member.uid;
+  }
+
+  closeRolePicker(): void {
+    this.rolePickerMemberUid = '';
+  }
+
+  isRolePickerOpen(member: CompanyMember): boolean {
+    return this.rolePickerMemberUid === member.uid;
+  }
+
+  rolePickerOptions(member: CompanyMember): UserRole[] {
+    return this.invitableRoles.includes(member.role)
+      ? this.invitableRoles
+      : [member.role, ...this.invitableRoles];
+  }
+
+  roleOptionClass(member: CompanyMember, role: UserRole): string {
+    return role === member.role
+      ? 'border-teal-300 bg-teal-50 text-slate-950 ring-2 ring-teal-500/15 dark:border-teal-400/40 dark:bg-teal-400/10 dark:text-white'
+      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900';
   }
 
   async toggleMemberPermission(member: CompanyMember, permission: Permission): Promise<void> {

@@ -114,6 +114,39 @@ export function roleDisplayName(role: UserRole | null | undefined): string {
   return role ? ROLE_DISPLAY_NAMES[role] : 'No role assigned';
 }
 
+export function normalizeUserRole(value: unknown, fallback: UserRole = 'team-member'): UserRole {
+  if (!value) {
+    return fallback;
+  }
+
+  const normalized = String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const aliases: Record<string, UserRole> = {
+    founder: 'founder',
+    'founder-super-admin': 'founder',
+    cofounder: 'cofounder',
+    'co-founder': 'cofounder',
+    'co-founder-admin': 'cofounder',
+    'finance-manager': 'finance-manager',
+    'operations-manager': 'operations-manager',
+    'hr-manager': 'hr-manager',
+    'team-member': 'team-member',
+    mentor: 'mentor',
+    auditor: 'auditor',
+    ca: 'ca',
+    'chartered-accountant': 'ca',
+    investor: 'investor',
+    viewer: 'investor',
+    'investor-viewer': 'investor',
+  };
+
+  return aliases[normalized] ?? fallback;
+}
+
 export function hasPermission(role: UserRole | null | undefined, permission: Permission): boolean {
   return role ? Boolean(ROLE_PERMISSIONS[role]?.[permission]) : false;
 }

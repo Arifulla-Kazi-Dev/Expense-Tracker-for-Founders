@@ -11,8 +11,8 @@ import {
 } from '@angular/fire/firestore';
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 
-import { CompanyMember } from '../models/company.model';
-import { PermissionOverrides, UserRole } from '../models/role.model';
+import { CompanyMember, CompanyMemberStatus } from '../models/company.model';
+import { PermissionOverrides, UserRole, normalizeUserRole } from '../models/role.model';
 import { CompanyService } from './company.service';
 import { PermissionService } from './permission.service';
 
@@ -30,7 +30,7 @@ export class MemberService {
 
       const membersRef = collection(this.firestore, `companies/${companyId}/members`);
       return collectionSnapshots(query(membersRef, orderBy('createdAt', 'asc'))).pipe(
-        map((snapshots) => snapshots.map((snapshot) => ({ ...snapshot.data(), uid: snapshot.id }) as CompanyMember)),
+        map((snapshots) => snapshots.map((snapshot) => normalizeMember(snapshot.id, snapshot.data()))),
         catchError((error) => {
           console.error('Members load failed', error);
           return of([]);
@@ -130,4 +130,35 @@ export class MemberService {
       ...update,
     };
   }
+}
+
+function normalizeMember(uid: string, value: Record<string, unknown>): CompanyMember {
+  return {
+    id: uid,
+    uid,
+    userId: (value['userId'] as string | undefined) ?? uid,
+    companyId: value['companyId'] as string | undefined,
+    companyName: value['companyName'] as string | undefined,
+    name: (value['name'] as string | undefined) ?? 'Member',
+    email: (value['email'] as string | null | undefined) ?? null,
+    photoURL: (value['photoURL'] as string | null | undefined) ?? null,
+    role: normalizeUserRole(value['role']),
+    status: normalizeStatus(value['status']),
+    invitedBy: (value['invitedBy'] as string | undefined) ?? '',
+    joinedAt: value['joinedAt'] as CompanyMember['joinedAt'],
+    createdAt: value['createdAt'] as CompanyMember['createdAt'],
+    updatedAt: value['updatedAt'] as CompanyMember['updatedAt'],
+    inviteId: value['inviteId'] as string | undefined,
+    permissionOverrides: value['permissionOverrides'] as PermissionOverrides | undefined,
+  };
+}
+
+function normalizeStatus(value: unknown): CompanyMemberStatus {
+  const normalized = String(value ?? '').toLowerCase();
+
+  if (normalized === 'invited' || normalized === 'suspended') {
+    return normalized;
+  }
+
+  return 'active';
 }
