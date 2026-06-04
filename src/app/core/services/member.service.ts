@@ -3,12 +3,12 @@ import {
   Firestore,
   collection,
   collectionSnapshots,
-  deleteDoc,
   doc,
+  getDoc,
   orderBy,
   query,
   serverTimestamp,
-  updateDoc,
+  writeBatch,
 } from '@angular/fire/firestore';
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 
@@ -50,24 +50,45 @@ export class MemberService {
       throw new Error('Only the founder can assign founder ownership.');
     }
 
-    await updateDoc(this.memberDoc(uid), {
+    const batch = writeBatch(this.firestore);
+    const update = {
       role,
       updatedAt: serverTimestamp(),
-    });
+    };
+    const membershipPayload = await this.membershipPayload(uid, update);
+
+    batch.update(this.memberDoc(uid), update);
+    batch.set(this.membershipDoc(uid), membershipPayload, { merge: true });
+
+    await batch.commit();
   }
 
   async suspend(uid: string): Promise<void> {
-    await updateDoc(this.memberDoc(uid), {
+    const batch = writeBatch(this.firestore);
+    const update = {
       status: 'suspended',
       updatedAt: serverTimestamp(),
-    });
+    };
+    const membershipPayload = await this.membershipPayload(uid, update);
+
+    batch.update(this.memberDoc(uid), update);
+    batch.set(this.membershipDoc(uid), membershipPayload, { merge: true });
+
+    await batch.commit();
   }
 
   async updatePermissionOverrides(uid: string, permissionOverrides: PermissionOverrides): Promise<void> {
-    await updateDoc(this.memberDoc(uid), {
+    const batch = writeBatch(this.firestore);
+    const update = {
       permissionOverrides,
       updatedAt: serverTimestamp(),
-    });
+    };
+    const membershipPayload = await this.membershipPayload(uid, update);
+
+    batch.update(this.memberDoc(uid), update);
+    batch.set(this.membershipDoc(uid), membershipPayload, { merge: true });
+
+    await batch.commit();
   }
 
   async remove(uid: string, role: UserRole): Promise<void> {
@@ -75,10 +96,41 @@ export class MemberService {
       throw new Error('Founder cannot be removed.');
     }
 
-    await deleteDoc(this.memberDoc(uid));
+    const batch = writeBatch(this.firestore);
+    batch.delete(this.memberDoc(uid));
+    batch.delete(this.membershipDoc(uid));
+
+    await batch.commit();
   }
 
   private memberDoc(uid: string) {
     return doc(this.firestore, `companies/${this.companyService.requireActiveCompanyId()}/members/${uid}`);
+  }
+
+  private membershipDoc(uid: string) {
+    return doc(this.firestore, `users/${uid}/memberships/${this.companyService.requireActiveCompanyId()}`);
+  }
+
+  private async membershipPayload(uid: string, update: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const companyId = this.companyService.requireActiveCompanyId();
+    const snapshot = await getDoc(this.memberDoc(uid));
+    const data = snapshot.data() as Partial<CompanyMember> | undefined;
+
+    return {
+      uid,
+      userId: data?.userId ?? uid,
+      companyId,
+      companyName: data?.companyName ?? '',
+      name: data?.name ?? 'Member',
+      email: data?.email ?? null,
+      photoURL: data?.photoURL ?? null,
+      role: data?.role ?? 'team-member',
+      status: data?.status ?? 'active',
+      invitedBy: data?.invitedBy ?? '',
+      permissionOverrides: data?.permissionOverrides ?? {},
+      joinedAt: data?.joinedAt ?? serverTimestamp(),
+      createdAt: data?.createdAt ?? serverTimestamp(),
+      ...update,
+    };
   }
 }

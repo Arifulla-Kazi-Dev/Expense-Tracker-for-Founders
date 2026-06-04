@@ -37,7 +37,7 @@ export class FundingComponent {
       secondaryAction: 'Realtime',
       formTitle: 'Add funding source',
       emptyTitle: 'No funding sources yet',
-      emptyDescription: 'Add your first funding source so dashboard runway and utilization can calculate from Firestore.',
+      emptyDescription: 'Add your first funding source so dashboard runway and utilization can calculate from Cloud.',
       fields: [
         { name: 'sourceName', label: 'Source name', type: 'text', required: true, placeholder: 'CIBA Pre-seed Funding' },
         { name: 'amount', label: 'Amount', type: 'number', required: true, placeholder: '200000' },

@@ -124,8 +124,12 @@ export class TeamComponent implements OnDestroy {
         return 'briefcase';
       case 'hr-manager':
         return 'users';
+      case 'mentor':
+        return 'lightbulb';
       case 'auditor':
         return 'file-search';
+      case 'ca':
+        return 'receipt-text';
       case 'investor':
         return 'eye';
       default:
@@ -458,7 +462,15 @@ export class TeamComponent implements OnDestroy {
 }
 
 function readableError(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message.replace('Firebase: ', '') : fallback;
+  return error instanceof Error ? cleanBackendTerms(error.message) : fallback;
+}
+
+function cleanBackendTerms(message: string): string {
+  return message
+    .replace(/Firebase:\s*/gi, '')
+    .replace(/FirebaseError:\s*/gi, '')
+    .replace(/Cloud Firestore/gi, 'Cloud database')
+    .replace(/Firestore/gi, 'Cloud');
 }
 
 interface TeamConfirmAction {

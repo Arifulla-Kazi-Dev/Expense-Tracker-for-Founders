@@ -40,7 +40,7 @@ export class FirestoreCrudService {
           ),
           switchMap((records) => records.length ? of(records) : this.legacyList<T>(collectionName)),
           catchError((error) => {
-            console.error('Firestore list failed', error);
+            console.error('Cloud list failed', error);
             return this.legacyList<T>(collectionName);
           }),
         );
@@ -56,7 +56,7 @@ export class FirestoreCrudService {
 
     await withTimeout(
       setDoc(recordRef, this.withMetadata(data, uid, companyId, recordRef.id)),
-      'Create record timed out. Check that Cloud Firestore is created/enabled and rules allow companies/{companyId} writes.',
+      'Create record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
     );
 
     return recordRef.id;
@@ -74,7 +74,7 @@ export class FirestoreCrudService {
 
     await withTimeout(
       updateDoc(recordRef, updateData),
-      'Update record timed out. Check that Cloud Firestore is created/enabled and rules allow companies/{companyId} writes.',
+      'Update record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
     );
   }
 
@@ -83,7 +83,7 @@ export class FirestoreCrudService {
     const companyId = this.requireCompanyId();
     await withTimeout(
       deleteDoc(doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`)),
-      'Delete record timed out. Check that Cloud Firestore is created/enabled and rules allow companies/{companyId} writes.',
+      'Delete record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
     );
   }
 
@@ -136,7 +136,7 @@ export class FirestoreCrudService {
           .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
       ),
       catchError((error) => {
-        console.error('Legacy Firestore list failed', error);
+        console.error('Legacy cloud list failed', error);
         return of([]);
       }),
     );
@@ -165,16 +165,24 @@ function readableFirestoreError(error: unknown): string {
   const normalized = message.toLowerCase();
 
   if (normalized.includes('not-found') || normalized.includes('404')) {
-    return 'Cloud Firestore database was not found for this Firebase project. Create the Firestore database in Firebase Console, then publish the app rules.';
+    return 'Cloud database was not found for this project. Enable the database, then publish the app access rules.';
   }
 
   if (normalized.includes('permission-denied') || normalized.includes('insufficient permissions')) {
-    return 'Firestore rejected the write. Publish the rules from firestore.rules so company members can write only inside their workspace.';
+    return 'Cloud rejected the write. Publish the access rules so company members can write only inside their workspace.';
   }
 
   if (normalized.includes('offline') || normalized.includes('unavailable')) {
-    return 'Firestore is unreachable from this browser. Check Firestore is enabled and that firestore.googleapis.com is not blocked.';
+    return 'Cloud data is unreachable from this browser. Check the database is enabled and that data requests are not blocked.';
   }
 
-  return message || 'Firestore write failed.';
+  return cleanBackendTerms(message) || 'Cloud write failed.';
+}
+
+function cleanBackendTerms(message: string): string {
+  return message
+    .replace(/Firebase:\s*/gi, '')
+    .replace(/FirebaseError:\s*/gi, '')
+    .replace(/Cloud Firestore/gi, 'Cloud database')
+    .replace(/Firestore/gi, 'Cloud');
 }

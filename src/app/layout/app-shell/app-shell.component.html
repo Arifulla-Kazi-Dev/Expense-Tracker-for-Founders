@@ -76,6 +76,24 @@
       </button>
     </div>
 
+    @if (hasMultipleCompanies()) {
+      <label class="mt-5 grid gap-2 text-xs font-semibold text-slate-400">
+        Active company
+        <select
+          class="h-10 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-semibold text-white outline-none transition focus:border-teal-300 disabled:opacity-60"
+          [value]="activeCompanyId() ?? ''"
+          [disabled]="isSwitchingCompany"
+          (change)="changeActiveCompany($event)"
+        >
+          @for (membership of memberships(); track membership.companyId) {
+            <option class="text-slate-950" [value]="membership.companyId">
+              {{ membership.companyName }} - {{ roleLabelFor(membership.role) }}
+            </option>
+          }
+        </select>
+      </label>
+    }
+
     <nav class="mt-8 flex flex-1 flex-col gap-1" aria-label="Mobile navigation">
       @for (item of visibleNavigationItems(); track item.label) {
         <a
@@ -132,6 +150,27 @@
           <h1 class="truncate text-lg font-semibold sm:text-xl">Company Dashboard</h1>
         </div>
 
+        @if (hasMultipleCompanies()) {
+          <label class="hidden min-w-56 md:block">
+            <span class="sr-only">Active company</span>
+            <div class="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-800 dark:bg-slate-900">
+              <svg lucideIcon="layers-3" class="size-4 text-slate-400"></svg>
+              <select
+                class="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none disabled:opacity-60 dark:text-slate-100"
+                [value]="activeCompanyId() ?? ''"
+                [disabled]="isSwitchingCompany"
+                (change)="changeActiveCompany($event)"
+              >
+                @for (membership of memberships(); track membership.companyId) {
+                  <option class="text-slate-950" [value]="membership.companyId">
+                    {{ membership.companyName }} - {{ roleLabelFor(membership.role) }}
+                  </option>
+                }
+              </select>
+            </div>
+          </label>
+        }
+
         <div class="hidden min-w-72 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:flex dark:border-slate-800 dark:bg-slate-900">
           <svg lucideIcon="search" class="size-4 text-slate-400"></svg>
           <input
@@ -173,7 +212,7 @@
           <a routerLink="/profile" class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white dark:hover:bg-slate-900" aria-label="Open profile">
             <div class="text-right">
               <p class="text-sm font-semibold">{{ profile()?.name || 'Member' }}</p>
-              <p class="text-xs text-slate-500 dark:text-slate-400">{{ profile()?.companyName || roleLabel() }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">{{ activeCompanyName() }}</p>
             </div>
             <div class="flex size-10 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">{{ initials() }}</div>
           </a>

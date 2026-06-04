@@ -131,7 +131,7 @@ export const categorySpends: CategorySpend[] = [
 
 export const ledgerPayments: LedgerPayment[] = [
   {
-    title: 'Firebase / Google Cloud placeholder',
+    title: 'Cloud infrastructure placeholder',
     owner: 'Infrastructure',
     category: 'Recurring Costs',
     status: 'Pending',
@@ -283,12 +283,12 @@ export const featurePages: Record<string, FeaturePageConfig> = {
     stats: [
       { label: 'Monthly Recurring', value: currencyINR(6000), detail: 'Baseline subscriptions', icon: 'repeat-2', tone: 'rose' },
       { label: 'Projected Yearly', value: currencyINR(72000), detail: 'At current plan', icon: 'line-chart', tone: 'sky' },
-      { label: 'Next Renewal', value: 'Jun 05', detail: 'Firebase placeholder', icon: 'calendar-clock', tone: 'amber' },
+      { label: 'Next Renewal', value: 'Jun 05', detail: 'Cloud placeholder', icon: 'calendar-clock', tone: 'amber' },
     ],
     rows: [
       { title: 'Codex plan', meta: 'AI Development Tools · Monthly', status: 'Paid', amount: currencyINR(2000) },
       { title: 'Claude plan', meta: 'AI Development Tools · Monthly', status: 'Ready', amount: currencyINR(2000) },
-      { title: 'Firebase / Google Cloud placeholder', meta: 'Infrastructure · Monthly', status: 'Pending', amount: currencyINR(1000) },
+      { title: 'Cloud infrastructure placeholder', meta: 'Infrastructure · Monthly', status: 'Pending', amount: currencyINR(1000) },
     ],
   },
   reports: {
@@ -330,7 +330,7 @@ export const featurePages: Record<string, FeaturePageConfig> = {
   settings: {
     eyebrow: 'Settings',
     title: 'Control profile, theme, demo data, and exports',
-    description: 'Manage workspace profile, import/export, demo data loading, and future Firebase storage preferences.',
+    description: 'Manage workspace profile, import/export, data controls, and future cloud storage preferences.',
     icon: 'settings',
     primaryAction: 'Load Demo Data',
     secondaryAction: 'Export JSON',
@@ -341,7 +341,7 @@ export const featurePages: Record<string, FeaturePageConfig> = {
     ],
     rows: [
       { title: 'Load demo data', meta: 'Creates company finance sample ledger', status: 'Ready', amount: currencyINR(200000) },
-      { title: 'Reset all data', meta: 'Requires confirmation in Firebase implementation', status: 'Draft', amount: 'Protected' },
+      { title: 'Reset all data', meta: 'Requires confirmation in the cloud implementation', status: 'Draft', amount: 'Protected' },
     ],
   },
 };

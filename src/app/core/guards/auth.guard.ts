@@ -16,7 +16,7 @@ export const authGuard: CanActivateFn = () => {
 
   return authService.user$.pipe(
     take(1),
-    map((user) => user ? true : router.createUrlTree(['/login'])),
+    map((user) => user ? true : router.createUrlTree(['/register'])),
   );
 };
 
@@ -30,7 +30,7 @@ export const authChildGuard: CanActivateChildFn = () => {
 
   return authService.user$.pipe(
     take(1),
-    map((user) => user ? true : router.createUrlTree(['/login'])),
+    map((user) => user ? true : router.createUrlTree(['/register'])),
   );
 };
 

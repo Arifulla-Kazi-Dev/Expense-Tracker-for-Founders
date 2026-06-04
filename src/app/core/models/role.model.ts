@@ -5,7 +5,9 @@ export type UserRole =
   | 'operations-manager'
   | 'hr-manager'
   | 'team-member'
+  | 'mentor'
   | 'auditor'
+  | 'ca'
   | 'investor';
 
 export type Permission =
@@ -32,7 +34,9 @@ export const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   'operations-manager': 'Operations Manager',
   'hr-manager': 'HR Manager',
   'team-member': 'Team Member',
-  auditor: 'Auditor / CA',
+  mentor: 'Mentor',
+  auditor: 'Auditor',
+  ca: 'Chartered Accountant',
   investor: 'Investor / Viewer',
 };
 
@@ -43,7 +47,9 @@ export const ROLE_OPTIONS: UserRole[] = [
   'operations-manager',
   'hr-manager',
   'team-member',
+  'mentor',
   'auditor',
+  'ca',
   'investor',
 ];
 
@@ -98,7 +104,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<Permission, boolean>> = {
     'viewReports',
   ]),
   'team-member': permissionSet(['readOnly']),
+  mentor: permissionSet(['readOnly', 'viewReports']),
   auditor: permissionSet(['readOnly', 'viewReports', 'exportReports']),
+  ca: permissionSet(['readOnly', 'viewReports', 'exportReports']),
   investor: permissionSet(['readOnly', 'viewReports']),
 };
 

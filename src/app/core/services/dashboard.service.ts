@@ -207,7 +207,7 @@ export class DashboardService {
       {
         label: 'Funding Received',
         value: currencyINR(summary.totalFunding),
-        detail: 'Total capital recorded in Firestore',
+        detail: 'Total capital recorded in Cloud',
         icon: 'wallet',
         tone: 'teal',
         progress: summary.totalFunding > 0 ? 100 : 0,

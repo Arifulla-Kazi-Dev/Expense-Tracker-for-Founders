@@ -125,7 +125,7 @@ export class AuthService {
         result = await withTimeout(
           this.runInFirebaseContext(() => createUserWithEmailAndPassword(this.auth, credentials.email, credentials.password)),
           AUTH_TIMEOUT_MS,
-          'Firebase Auth signup is taking too long. Check your connection, Firebase Auth settings, and authorized domains.',
+          'Cloud sign-up is taking too long. Check your connection and authorized domains.',
         );
       } catch (error) {
         if (!isEmailAlreadyInUse(error)) {
@@ -135,17 +135,17 @@ export class AuthService {
         result = await withTimeout(
           this.runInFirebaseContext(() => signInWithEmailAndPassword(this.auth, credentials.email, credentials.password)),
           AUTH_TIMEOUT_MS,
-          'This account already exists. I tried signing in to repair the profile, but Firebase Auth did not respond.',
+          'This account already exists. I tried signing in to repair the profile, but Cloud sign-in did not respond.',
         );
       }
 
       await withTimeout(
         this.runInFirebaseContext(() => updateProfile(result.user, { displayName: credentials.name })),
         PROFILE_SYNC_TIMEOUT_MS,
-        'Firebase profile display name update timed out.',
+        'Cloud profile display name update timed out.',
       ).catch((error) => this.profileSyncErrorSubject.next(readableFirebaseError(error)));
 
-      await this.ensureUserProfileWithRetry(result.user, {
+      await this.ensureProfileAfterAuth(result.user, {
         companyName: credentials.companyName,
         includeCreatedAt: true,
         inviteToken,
@@ -165,10 +165,10 @@ export class AuthService {
       const result = await withTimeout(
         this.runInFirebaseContext(() => signInWithEmailAndPassword(this.auth, email, password)),
         AUTH_TIMEOUT_MS,
-        'Firebase Auth login is taking too long. Check your connection and Firebase Auth settings.',
+        'Cloud sign-in is taking too long. Check your connection and sign-in settings.',
       );
 
-      await this.ensureUserProfileWithRetry(result.user, { includeCreatedAt: true, inviteToken: resolvedInviteToken });
+      await this.ensureProfileAfterAuth(result.user, { includeCreatedAt: true, inviteToken: resolvedInviteToken });
       this.clearPendingInviteToken(resolvedInviteToken);
     } finally {
       this.isHandlingExplicitAuthFlow = false;
@@ -187,18 +187,18 @@ export class AuthService {
       const result = await withTimeout(
         this.runInFirebaseContext(() => signInWithPopup(this.auth, provider)),
         AUTH_TIMEOUT_MS,
-        'Google Sign-In is taking too long. Check popup permissions and Firebase Auth settings.',
+        'Google Sign-In is taking too long. Check popup permissions and Cloud sign-in settings.',
       );
 
       if (profileOverrides.name?.trim()) {
         await withTimeout(
           this.runInFirebaseContext(() => updateProfile(result.user, { displayName: profileOverrides.name?.trim() })),
           PROFILE_SYNC_TIMEOUT_MS,
-          'Firebase profile display name update timed out.',
+          'Cloud profile display name update timed out.',
         ).catch((error) => this.profileSyncErrorSubject.next(readableFirebaseError(error)));
       }
 
-      await this.ensureUserProfileWithRetry(result.user, {
+      await this.ensureProfileAfterAuth(result.user, {
         companyName: profileOverrides.companyName,
         includeCreatedAt: true,
         inviteToken: resolvedInviteToken,
@@ -216,7 +216,7 @@ export class AuthService {
 
   async logout(): Promise<void> {
     await this.runInFirebaseContext(() => signOut(this.auth));
-    await this.router.navigateByUrl('/login');
+    await this.router.navigate(['/login'], { queryParams: { intent: 'signin' }, replaceUrl: true });
   }
 
   async retryCurrentUserProfileSync(): Promise<void> {
@@ -245,7 +245,7 @@ export class AuthService {
         await withTimeout(
           this.ensureUserProfile(user, overrides),
           PROFILE_SYNC_TIMEOUT_MS,
-          'Firestore profile sync timed out. Check that Cloud Firestore is enabled and rules allow users/{uid}, companies/{companyId}, and member writes.',
+          'Cloud profile sync timed out. Check that the cloud database is enabled and access rules allow user, company, and member writes.',
         );
         this.clearProfileSyncError();
         return;
@@ -261,6 +261,21 @@ export class AuthService {
     const message = readableFirebaseError(lastError);
     this.profileSyncErrorSubject.next(message);
     throw new Error(message);
+  }
+
+  private async ensureProfileAfterAuth(
+    user: User,
+    overrides: ProfileSyncOverrides = {},
+  ): Promise<void> {
+    try {
+      await this.ensureUserProfileWithRetry(user, overrides);
+    } catch (error) {
+      if (overrides.inviteToken) {
+        throw error;
+      }
+
+      this.profileSyncErrorSubject.next(readableFirebaseError(error));
+    }
   }
 
   private async ensureUserProfile(
@@ -282,7 +297,9 @@ export class AuthService {
       return;
     }
 
-    const acceptedInvite = await this.findAcceptedInviteForUser(user.uid);
+    const acceptedInvite = !existingData?.activeCompanyId && !existingData?.defaultCompanyId
+      ? await this.findAcceptedInviteForUser(user.uid)
+      : null;
 
     if (acceptedInvite) {
       await this.repairProfileFromAcceptedInvite(
@@ -346,19 +363,24 @@ export class AuthService {
     };
 
     batch.set(companyRef, companyPayload, { merge: true });
-    batch.set(doc(this.firestore, `companies/${companyId}/members/${user.uid}`), {
+    const memberPayload = {
       uid: user.uid,
+      userId: user.uid,
+      companyId,
+      companyName,
       name,
       email: user.email,
       photoURL: user.photoURL,
       role,
       status: 'active',
       invitedBy: user.uid,
-      permissionOverrides: {},
       joinedAt: now,
       createdAt: existingData?.createdAt ?? now,
       updatedAt: now,
-    }, { merge: true });
+    };
+
+    batch.set(doc(this.firestore, `companies/${companyId}/members/${user.uid}`), memberPayload, { merge: true });
+    batch.set(doc(this.firestore, `users/${user.uid}/memberships/${companyId}`), memberPayload, { merge: true });
 
     await this.runInFirebaseContext(() => batch.commit());
 
@@ -375,7 +397,7 @@ export class AuthService {
       await this.ensureUserProfileWithRetry(user, overrides);
     } catch {
       // Auth should not strand the user if profile sync is temporarily unavailable.
-      // The shell shows profileSyncError$ and any later Firestore write will retry against the same UID.
+      // The shell shows profileSyncError$ and any later cloud write will retry against the same UID.
     }
   }
 
@@ -422,7 +444,7 @@ export class AuthService {
       photoURL: user.photoURL,
       role: invite.role,
       companyName: invite.companyName,
-      defaultCompanyId: invite.companyId,
+      defaultCompanyId: existingData?.defaultCompanyId ?? invite.companyId,
       activeCompanyId: invite.companyId,
       updatedAt: now,
       lastLoginAt: now,
@@ -434,8 +456,11 @@ export class AuthService {
 
     const batch = writeBatch(this.firestore);
     batch.set(profileRef, profile, { merge: true });
-    batch.set(memberRef, {
+    const memberPayload = {
       uid: user.uid,
+      userId: user.uid,
+      companyId: invite.companyId,
+      companyName: invite.companyName,
       name,
       email: user.email,
       photoURL: user.photoURL,
@@ -447,7 +472,10 @@ export class AuthService {
       createdAt: now,
       updatedAt: now,
       inviteId: invite.inviteId,
-    }, { merge: true });
+    };
+
+    batch.set(memberRef, memberPayload, { merge: true });
+    batch.set(doc(this.firestore, `users/${user.uid}/memberships/${invite.companyId}`), memberPayload, { merge: true });
     batch.update(inviteRef, {
       status: 'accepted',
       acceptedAt: now,
@@ -481,7 +509,7 @@ export class AuthService {
       photoURL: user.photoURL,
       role: invite.role,
       companyName: invite.companyName,
-      defaultCompanyId: invite.companyId,
+      defaultCompanyId: existingData?.defaultCompanyId ?? invite.companyId,
       activeCompanyId: invite.companyId,
       updatedAt: now,
       lastLoginAt: now,
@@ -491,7 +519,29 @@ export class AuthService {
       profile['createdAt'] = now;
     }
 
-    await this.runInFirebaseContext(() => writeBatch(this.firestore).set(profileRef, profile, { merge: true }).commit());
+    const memberPayload = {
+      uid: user.uid,
+      userId: user.uid,
+      companyId: invite.companyId,
+      companyName: invite.companyName,
+      name,
+      email: user.email,
+      photoURL: user.photoURL,
+      role: invite.role,
+      status: 'active',
+      invitedBy: invite.invitedByUid,
+      joinedAt: now,
+      createdAt: existingData?.createdAt ?? now,
+      updatedAt: now,
+      inviteId: invite.inviteId,
+    };
+
+    const batch = writeBatch(this.firestore);
+    batch.set(profileRef, profile, { merge: true });
+    batch.set(doc(this.firestore, `companies/${invite.companyId}/members/${user.uid}`), memberPayload, { merge: true });
+    batch.set(doc(this.firestore, `users/${user.uid}/memberships/${invite.companyId}`), memberPayload, { merge: true });
+
+    await this.runInFirebaseContext(() => batch.commit());
   }
 
   private async findInviteByToken(token: string): Promise<CompanyInvite | null> {
@@ -660,17 +710,25 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: 
 }
 
 function readableFirebaseError(error: unknown): string {
-  const message = error instanceof Error ? error.message.replace('Firebase: ', '') : 'Unable to sync your Firestore profile.';
+  const message = error instanceof Error ? cleanBackendTerms(error.message) : 'Unable to sync your Cloud profile.';
 
   if (message.toLowerCase().includes('client is offline')) {
-    return 'Firestore is not reachable from this browser right now. Check that Cloud Firestore is created/enabled for this Firebase project and that your internet/ad blocker is not blocking firestore.googleapis.com.';
+    return 'Cloud data is not reachable from this browser right now. Check that the cloud database is enabled and that your internet/ad blocker is not blocking data requests.';
   }
 
   if (message.toLowerCase().includes('permission-denied') || message.toLowerCase().includes('missing or insufficient permissions')) {
-    return 'Firestore rejected this request. Publish the updated Firestore rules for users, companies, members, invites, and company ledger collections.';
+    return 'Cloud rejected this request. Publish the updated Cloud access rules for users, companies, members, invites, and company ledger collections.';
   }
 
   return message;
+}
+
+function cleanBackendTerms(message: string): string {
+  return message
+    .replace(/Firebase:\s*/gi, '')
+    .replace(/FirebaseError:\s*/gi, '')
+    .replace(/Cloud Firestore/gi, 'Cloud database')
+    .replace(/Firestore/gi, 'Cloud');
 }
 
 function isEmailAlreadyInUse(error: unknown): boolean {
@@ -692,7 +750,9 @@ function normalizeRole(value: unknown, fallback: UserRole): UserRole {
     'operations-manager',
     'hr-manager',
     'team-member',
+    'mentor',
     'auditor',
+    'ca',
     'investor',
   ];
 

@@ -38,7 +38,7 @@ export class FounderNotesComponent {
       emptyDescription: 'Capture the reasoning behind important finance decisions and revisit ROI later.',
       fields: [
         { name: 'title', label: 'Title', type: 'text', required: true },
-        { name: 'relatedExpenseId', label: 'Related expense ID', type: 'text', placeholder: 'Optional Firestore document ID' },
+        { name: 'relatedExpenseId', label: 'Related expense ID', type: 'text', placeholder: 'Optional cloud record ID' },
         { name: 'decisionReason', label: 'Decision reason', type: 'textarea', required: true, rows: 3 },
         { name: 'expectedBenefit', label: 'Expected benefit', type: 'textarea', required: true, rows: 3 },
         { name: 'priority', label: 'Priority', type: 'select', required: true, options: FOUNDER_NOTE_PRIORITIES },

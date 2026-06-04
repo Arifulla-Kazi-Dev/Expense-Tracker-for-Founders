@@ -6,7 +6,7 @@
     </div>
     <a
       routerLink="/login"
-      [queryParams]="isInviteFlow ? { inviteToken } : null"
+      [queryParams]="loginQueryParams"
       class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
     >
       Sign in
@@ -24,14 +24,14 @@
           </p>
         </div>
         <div class="grid gap-3 text-sm text-slate-300">
-          <div class="flex items-center gap-2"><svg lucideIcon="shield-check" class="size-4"></svg> Company-scoped Firestore records</div>
+          <div class="flex items-center gap-2"><svg lucideIcon="shield-check" class="size-4"></svg> Company-scoped cloud records</div>
           <div class="flex items-center gap-2"><svg lucideIcon="wallet" class="size-4"></svg> Funding and expense CRUD</div>
           <div class="flex items-center gap-2"><svg lucideIcon="users" class="size-4"></svg> Invite-based team roles</div>
         </div>
       </div>
 
       <div class="p-6 sm:p-8">
-        <a routerLink="/login" [queryParams]="isInviteFlow ? { inviteToken } : null" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-white">
+        <a routerLink="/login" [queryParams]="loginQueryParams" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-white">
           <svg lucideIcon="arrow-left" class="size-4"></svg>
           {{ isInviteFlow ? 'Sign in instead' : 'Back to login' }}
         </a>
@@ -50,7 +50,7 @@
             <div>
               @if (isInviteLoading) {
                 <p class="font-semibold">Validating invite link...</p>
-                <p class="mt-1 leading-5">Checking workspace and assigned role from Firestore.</p>
+                <p class="mt-1 leading-5">Checking workspace and assigned role from Cloud.</p>
               } @else if (inviteError) {
                 <p class="font-semibold">Invite cannot be used</p>
                 <p class="mt-1 leading-5">{{ inviteError }}</p>

@@ -37,9 +37,17 @@ export class ForgotPasswordComponent {
       await this.authService.forgotPassword(this.form.controls.email.value);
       this.successMessage = 'Password reset email sent. Check your inbox.';
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message.replace('Firebase: ', '') : 'Unable to send reset email.';
+      this.errorMessage = error instanceof Error ? cleanBackendTerms(error.message) : 'Unable to send reset email.';
     } finally {
       this.isSubmitting = false;
     }
   }
+}
+
+function cleanBackendTerms(message: string): string {
+  return message
+    .replace(/Firebase:\s*/gi, '')
+    .replace(/FirebaseError:\s*/gi, '')
+    .replace(/Cloud Firestore/gi, 'Cloud database')
+    .replace(/Firestore/gi, 'Cloud');
 }

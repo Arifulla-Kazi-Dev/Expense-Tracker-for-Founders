@@ -139,6 +139,30 @@ service cloud.firestore {
         || canManageRoles(companyId);
     }
 
+    function selfMemberProfileSync(companyId, memberId) {
+      return signedIn()
+        && memberId == request.auth.uid
+        && isCompanyMember(companyId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['permissionOverrides'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'uid',
+          'userId',
+          'companyId',
+          'companyName',
+          'name',
+          'email',
+          'photoURL',
+          'invitedBy',
+          'joinedAt',
+          'createdAt',
+          'updatedAt',
+          'inviteId'
+        ]);
+    }
+
     function coreInviteFieldsUnchanged(companyId) {
       return request.resource.data.inviteId == resource.data.inviteId
         && request.resource.data.companyId == companyId
@@ -168,6 +192,29 @@ service cloud.firestore {
           || profileRoleMatchesMembership(userId)
         );
       allow delete: if isSelf(userId);
+
+      match /memberships/{companyId} {
+        allow read: if isSelf(userId);
+
+        allow create, update: if signedIn()
+          && request.resource.data.userId == userId
+          && request.resource.data.uid == userId
+          && request.resource.data.companyId == companyId
+          && existsAfter(memberPath(companyId, userId))
+          && getAfter(memberPath(companyId, userId)).data.status == request.resource.data.status
+          && getAfter(memberPath(companyId, userId)).data.role == request.resource.data.role
+          && (
+            isSelf(userId)
+            || canManageMembers(companyId)
+            || canManageRoles(companyId)
+          );
+
+        allow delete: if signedIn()
+          && (
+            isSelf(userId)
+            || canManageMembers(companyId)
+          );
+      }
 
       match /{legacyCollection}/{docId} {
         allow read: if isSelf(userId);
@@ -203,14 +250,17 @@ service cloud.firestore {
             )
           );
 
-        allow update: if canManageMembers(companyId)
-          && resource.data.role != 'founder'
-          && request.resource.data.role != 'founder'
-          && protectedCofounderTarget(companyId)
-          && coreMemberFieldsUnchanged()
-          && roleChangeAllowed(companyId)
-          && permissionOverrideChangeAllowed(companyId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'permissionOverrides', 'updatedAt']);
+        allow update: if (
+            canManageMembers(companyId)
+            && resource.data.role != 'founder'
+            && request.resource.data.role != 'founder'
+            && protectedCofounderTarget(companyId)
+            && coreMemberFieldsUnchanged()
+            && roleChangeAllowed(companyId)
+            && permissionOverrideChangeAllowed(companyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'permissionOverrides', 'updatedAt'])
+          )
+          || selfMemberProfileSync(companyId, memberId);
 
         allow delete: if canManageMembers(companyId)
           && resource.data.role != 'founder'
@@ -354,3 +404,8 @@ service cloud.firestore {
     }
   }
 }
+
+
+
+
+

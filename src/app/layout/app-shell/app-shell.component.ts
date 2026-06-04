@@ -1,4 +1,4 @@
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Component, OnDestroy, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -7,6 +7,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { mobileNavigationItems, navigationItems } from '../../core/data/navigation.data';
 import { NavigationItem } from '../../core/models/dashboard.models';
+import { CompanyMembership } from '../../core/models/company.model';
 import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PermissionService } from '../../core/services/permission.service';
@@ -14,7 +15,7 @@ import { PermissionService } from '../../core/services/permission.service';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [FormsModule, LucideDynamicIcon, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [CommonModule, FormsModule, LucideDynamicIcon, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
 })
@@ -28,6 +29,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   isDarkMode = false;
   isMobileMenuOpen = false;
   isRetryingProfileSync = false;
+  isSwitchingCompany = false;
   isSyncing = false;
   toastMessage = '';
 
@@ -39,6 +41,9 @@ export class AppShellComponent implements OnInit, OnDestroy {
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
   readonly profileSyncError = toSignal(this.authService.profileSyncError$, { initialValue: '' });
+  readonly memberships = toSignal(this.permissionService.memberships$, { initialValue: [] as CompanyMembership[] });
+  readonly activeCompanyId = toSignal(this.permissionService.activeCompanyId$, { initialValue: null });
+  readonly activeMembership = toSignal(this.permissionService.activeMembership$, { initialValue: null });
   readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
   private toastTimer?: ReturnType<typeof setTimeout>;
   private syncTimer?: ReturnType<typeof setTimeout>;
@@ -98,6 +103,27 @@ export class AppShellComponent implements OnInit, OnDestroy {
     await this.authService.logout();
   }
 
+  async changeActiveCompany(event: Event): Promise<void> {
+    const companyId = (event.target as HTMLSelectElement).value;
+
+    if (!companyId || companyId === this.activeCompanyId() || this.isSwitchingCompany) {
+      return;
+    }
+
+    this.isSwitchingCompany = true;
+    const nextCompanyName = this.memberships().find((membership) => membership.companyId === companyId)?.companyName ?? 'selected company';
+
+    try {
+      await this.permissionService.setActiveCompany(companyId);
+      this.closeMobileMenu();
+      this.showToast(`Switched to ${nextCompanyName}`);
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Unable to switch company');
+    } finally {
+      this.isSwitchingCompany = false;
+    }
+  }
+
   dismissProfileSyncError(): void {
     this.authService.clearProfileSyncError();
   }
@@ -111,7 +137,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
     try {
       await this.authService.retryCurrentUserProfileSync();
-      this.showToast('Profile synced to Firestore');
+      this.showToast('Profile synced to Cloud');
     } catch (error) {
       this.showToast(error instanceof Error ? error.message : 'Unable to sync profile');
     } finally {
@@ -131,6 +157,18 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   roleLabel(): string {
     return this.permissionService.roleLabel();
+  }
+
+  roleLabelFor(role: CompanyMembership['role']): string {
+    return this.permissionService.roleLabelFor(role);
+  }
+
+  hasMultipleCompanies(): boolean {
+    return this.memberships().length > 1;
+  }
+
+  activeCompanyName(): string {
+    return this.activeMembership()?.companyName || this.profile()?.companyName || 'Company workspace';
   }
 
   runwayLabel(): string {

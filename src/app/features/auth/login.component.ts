@@ -6,6 +6,9 @@ import { LucideDynamicIcon } from '@lucide/angular';
 
 import { AuthService } from '../../core/services/auth.service';
 
+const RETURNING_USER_STORAGE_KEY = 'startup-expense-os-auth-seen';
+const SIGNIN_INTENT = 'signin';
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -31,6 +34,10 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.inviteToken = this.readInviteToken();
+
+    if (this.shouldSendFirstVisitToRegister()) {
+      void this.router.navigate(['/register'], { replaceUrl: true });
+    }
   }
 
   get isInviteFlow(): boolean {
@@ -48,6 +55,7 @@ export class LoginComponent implements OnInit {
 
     try {
       await this.authService.login(this.form.controls.email.value, this.form.controls.password.value, this.currentInviteToken());
+      this.rememberReturningUser();
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -67,6 +75,7 @@ export class LoginComponent implements OnInit {
 
     try {
       await this.authService.loginWithGoogle(this.currentInviteToken());
+      this.rememberReturningUser();
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -97,12 +106,44 @@ export class LoginComponent implements OnInit {
   private currentInviteToken(): string | null {
     return this.inviteToken.trim() || null;
   }
+
+  private shouldSendFirstVisitToRegister(): boolean {
+    if (!this.isBrowser || this.inviteToken || this.route.snapshot.queryParamMap.get('intent') === SIGNIN_INTENT) {
+      return false;
+    }
+
+    try {
+      return localStorage.getItem(RETURNING_USER_STORAGE_KEY) !== 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private rememberReturningUser(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
+    } catch {
+      // Storage can be disabled in private or locked-down browsers.
+    }
+  }
 }
 
 function authErrorMessage(error: unknown): string {
   if (error instanceof Error) {
-    return error.message.replace('Firebase: ', '');
+    return cleanBackendTerms(error.message);
   }
 
   return 'Unable to sign in. Please check your credentials and try again.';
+}
+
+function cleanBackendTerms(message: string): string {
+  return message
+    .replace(/Firebase:\s*/gi, '')
+    .replace(/FirebaseError:\s*/gi, '')
+    .replace(/Cloud Firestore/gi, 'Cloud database')
+    .replace(/Firestore/gi, 'Cloud');
 }

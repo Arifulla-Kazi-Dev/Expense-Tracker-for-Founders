@@ -23,7 +23,6 @@ export class ProfileComponent implements OnDestroy {
   readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     companyName: ['', [Validators.required, Validators.minLength(2)]],
-    photoURL: [''],
   });
 
   errorMessage = '';
@@ -53,7 +52,7 @@ export class ProfileComponent implements OnDestroy {
 
     try {
       await this.userService.updateProfile(this.form.getRawValue());
-      this.showToast('Profile saved to Firestore');
+      this.showToast('Profile saved to Cloud');
       this.form.markAsPristine();
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to update profile.';
@@ -62,7 +61,7 @@ export class ProfileComponent implements OnDestroy {
     }
   }
 
-  patchFromProfile(profile: { name?: string; companyName?: string; photoURL?: string | null } | null): void {
+  patchFromProfile(profile: { name?: string; companyName?: string } | null): void {
     if (!profile || this.hasLoadedProfile || this.form.dirty) {
       return;
     }
@@ -71,7 +70,6 @@ export class ProfileComponent implements OnDestroy {
     this.form.patchValue({
       name: profile.name ?? '',
       companyName: profile.companyName ?? '',
-      photoURL: profile.photoURL ?? '',
     });
   }
 

@@ -374,7 +374,7 @@ export class DashboardComponent implements OnDestroy {
     const summary = this.summary();
 
     if (!summary.hasData) {
-      return 'No Firestore ledger data yet.';
+      return 'No cloud ledger data yet.';
     }
 
     const activeAreas = [

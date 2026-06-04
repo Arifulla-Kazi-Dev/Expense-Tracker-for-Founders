@@ -31,13 +31,18 @@ export class UserService {
       await this.companyService.updateCompanyProfile(profile.companyName);
     }
 
-    await setDoc(doc(this.firestore, `users/${uid}`), {
+    const payload: Record<string, unknown> = {
       uid,
       name: profile.name,
-      photoURL: profile.photoURL ?? null,
       companyName: profile.companyName ?? currentProfile?.companyName,
       role: currentProfile?.role ?? 'founder',
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    };
+
+    if ('photoURL' in profile) {
+      payload['photoURL'] = profile.photoURL ?? null;
+    }
+
+    await setDoc(doc(this.firestore, `users/${uid}`), payload, { merge: true });
   }
 }

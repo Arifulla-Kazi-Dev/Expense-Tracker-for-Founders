@@ -9,6 +9,8 @@ import { roleDisplayName } from '../../core/models/role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { InviteService } from '../../core/services/invite.service';
 
+const RETURNING_USER_STORAGE_KEY = 'startup-expense-os-auth-seen';
+
 @Component({
   selector: 'app-register',
   standalone: true,
@@ -71,6 +73,12 @@ export class RegisterComponent implements OnInit {
     return !this.isSubmitting && !this.isInviteLoading && (!this.isInviteFlow || Boolean(this.invite));
   }
 
+  get loginQueryParams(): Record<string, string> {
+    return this.isInviteFlow
+      ? { inviteToken: this.inviteToken, intent: 'signin' }
+      : { intent: 'signin' };
+  }
+
   invitePanelClass(): string {
     return this.inviteError
       ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
@@ -91,6 +99,7 @@ export class RegisterComponent implements OnInit {
         ...this.form.getRawValue(),
         inviteToken: this.currentInviteToken(),
       });
+      this.rememberReturningUser();
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -115,6 +124,7 @@ export class RegisterComponent implements OnInit {
         companyName: formValue.companyName,
         name: formValue.name,
       });
+      this.rememberReturningUser();
       this.clearStoredInvite();
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
@@ -172,12 +182,32 @@ export class RegisterComponent implements OnInit {
   private currentInviteToken(): string | null {
     return this.invite?.token ?? (this.inviteToken.trim() || null);
   }
+
+  private rememberReturningUser(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
+    } catch {
+      // Storage can be disabled in private or locked-down browsers.
+    }
+  }
 }
 
 function authErrorMessage(error: unknown): string {
   if (error instanceof Error) {
-    return error.message.replace('Firebase: ', '');
+    return cleanBackendTerms(error.message);
   }
 
   return 'Unable to create the account. Please try again.';
+}
+
+function cleanBackendTerms(message: string): string {
+  return message
+    .replace(/Firebase:\s*/gi, '')
+    .replace(/FirebaseError:\s*/gi, '')
+    .replace(/Cloud Firestore/gi, 'Cloud database')
+    .replace(/Firestore/gi, 'Cloud');
 }

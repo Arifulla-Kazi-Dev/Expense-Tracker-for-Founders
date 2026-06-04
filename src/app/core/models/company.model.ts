@@ -19,6 +19,28 @@ export interface Company {
 export interface CompanyMember {
   id?: string;
   uid: string;
+  userId?: string;
+  companyId?: string;
+  companyName?: string;
+  name: string;
+  email: string | null;
+  photoURL: string | null;
+  role: UserRole;
+  status: CompanyMemberStatus;
+  invitedBy: string;
+  joinedAt: FirestoreDate;
+  createdAt: FirestoreDate;
+  updatedAt: FirestoreDate;
+  inviteId?: string;
+  permissionOverrides?: PermissionOverrides;
+}
+
+export interface CompanyMembership {
+  id?: string;
+  userId: string;
+  uid: string;
+  companyId: string;
+  companyName: string;
   name: string;
   email: string | null;
   photoURL: string | null;
