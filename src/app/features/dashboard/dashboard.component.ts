@@ -6,7 +6,9 @@ import { RouterLink } from '@angular/router';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { PaymentStatus, Tone } from '../../core/models/dashboard.models';
+import { AuthService } from '../../core/services/auth.service';
 import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
+import { LedgerExportFormat, LedgerExportService } from '../../core/services/ledger-export.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import {
   badgeClass,
@@ -25,9 +27,12 @@ import { SpendTrendChartComponent } from '../../shared/components/spend-trend-ch
   styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent implements OnDestroy {
+  private readonly authService = inject(AuthService);
   private readonly dashboardService = inject(DashboardService);
+  private readonly ledgerExportService = inject(LedgerExportService);
 
   readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
+  readonly profile = toSignal(this.authService.profile$, { initialValue: null });
   readonly ranges = ['This month', 'Quarter', 'Year'];
 
   selectedRange = 'This month';
@@ -447,6 +452,23 @@ export class DashboardComponent implements OnDestroy {
   saveDraftExpense(): void {
     this.closeModal();
     this.showToast('Draft expense saved for review');
+  }
+
+  canExport(): boolean {
+    return this.ledgerExportService.canExport();
+  }
+
+  exportLedger(format: LedgerExportFormat): void {
+    try {
+      this.ledgerExportService.exportSummary(this.summary(), format, {
+        companyName: this.profile()?.companyName,
+        exportedBy: this.profile()?.name,
+        email: this.profile()?.email,
+      });
+      this.showToast(`${format.toUpperCase()} export downloaded`);
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Unable to export ledger');
+    }
   }
 
   simulateRefresh(): void {

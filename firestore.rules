@@ -114,6 +114,21 @@ service cloud.firestore {
         && getAfter(memberPath(request.resource.data.activeCompanyId, userId)).data.role == request.resource.data.role;
     }
 
+    function profileCompanyNameChangeAllowed(userId) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['companyName'])
+        || request.resource.data.companyName == resource.data.companyName
+        || (
+          request.resource.data.activeCompanyId is string
+          && existsAfter(memberPath(request.resource.data.activeCompanyId, userId))
+          && getAfter(memberPath(request.resource.data.activeCompanyId, userId)).data.status == 'active'
+          && getAfter(memberPath(request.resource.data.activeCompanyId, userId)).data.companyName == request.resource.data.companyName
+        )
+        || (
+          request.resource.data.activeCompanyId is string
+          && canManageCompany(request.resource.data.activeCompanyId)
+        );
+    }
+
     function coreMemberFieldsUnchanged() {
       return request.resource.data.uid == resource.data.uid
         && request.resource.data.createdAt == resource.data.createdAt
@@ -186,6 +201,7 @@ service cloud.firestore {
       allow create: if isSelf(userId) && request.resource.data.uid == userId;
       allow update: if isSelf(userId)
         && request.resource.data.uid == userId
+        && profileCompanyNameChangeAllowed(userId)
         && (
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
           || request.resource.data.role == resource.data.role
@@ -404,7 +420,6 @@ service cloud.firestore {
     }
   }
 }
-
 
 
 

@@ -8,7 +8,7 @@
         </div>
         <h2 class="mt-3 text-2xl font-semibold sm:text-3xl">Manage your workspace identity</h2>
         <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Keep your name and company workspace aligned for shared finance records.
+          Keep your personal name accurate across team, reports, and workspace activity. Company identity is managed by workspace admins.
         </p>
       </div>
       <a
@@ -58,11 +58,23 @@
           </label>
           <label class="grid gap-2 text-sm font-medium">
             Company name
-            <input
-              formControlName="companyName"
-              type="text"
-              class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950"
-            >
+            <div class="relative">
+              <input
+                formControlName="companyName"
+                type="text"
+                class="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 pr-24 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:bg-slate-50 disabled:text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:disabled:bg-slate-900 dark:disabled:text-slate-400"
+              >
+              @if (!canManageCompany()) {
+                <span class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                  Locked
+                </span>
+              }
+            </div>
+            @if (!canManageCompany()) {
+              <span class="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Only the founder or a company admin can rename the workspace.
+              </span>
+            }
           </label>
         </div>
 

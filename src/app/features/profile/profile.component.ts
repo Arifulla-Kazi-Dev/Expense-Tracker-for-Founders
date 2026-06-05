@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { UserService } from '../../core/services/user.service';
+import { PermissionService } from '../../core/services/permission.service';
 
 @Component({
   selector: 'app-profile',
@@ -15,11 +16,13 @@ import { UserService } from '../../core/services/user.service';
 })
 export class ProfileComponent implements OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly permissionService = inject(PermissionService);
   private readonly userService = inject(UserService);
   private hasLoadedProfile = false;
   private toastTimer?: ReturnType<typeof setTimeout>;
 
   readonly profile = toSignal(this.userService.profile$, { initialValue: null });
+  readonly permissions = toSignal(this.permissionService.permissions$, { initialValue: null });
   readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     companyName: ['', [Validators.required, Validators.minLength(2)]],
@@ -32,6 +35,10 @@ export class ProfileComponent implements OnDestroy {
   constructor() {
     effect(() => {
       this.patchFromProfile(this.profile());
+    });
+
+    effect(() => {
+      this.syncCompanyFieldAccess(this.canManageCompany());
     });
   }
 
@@ -51,7 +58,12 @@ export class ProfileComponent implements OnDestroy {
     this.errorMessage = '';
 
     try {
-      await this.userService.updateProfile(this.form.getRawValue());
+      const value = this.form.getRawValue();
+
+      await this.userService.updateProfile({
+        name: value.name,
+        companyName: this.canManageCompany() ? value.companyName : undefined,
+      });
       this.showToast('Profile saved to Cloud');
       this.form.markAsPristine();
     } catch (error) {
@@ -71,6 +83,21 @@ export class ProfileComponent implements OnDestroy {
       name: profile.name ?? '',
       companyName: profile.companyName ?? '',
     });
+  }
+
+  canManageCompany(): boolean {
+    return Boolean(this.permissions()?.manageCompany);
+  }
+
+  private syncCompanyFieldAccess(canManageCompany: boolean): void {
+    if (canManageCompany && this.form.controls.companyName.disabled) {
+      this.form.controls.companyName.enable({ emitEvent: false });
+      return;
+    }
+
+    if (!canManageCompany && this.form.controls.companyName.enabled) {
+      this.form.controls.companyName.disable({ emitEvent: false });
+    }
   }
 
   private showToast(message: string): void {

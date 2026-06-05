@@ -91,7 +91,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<Permission, boolean>> = {
     'manageRecurringCosts',
     'manageTeamPayments',
     'viewReports',
-    'exportReports',
   ]),
   'operations-manager': permissionSet([
     'manageExpenses',
@@ -105,8 +104,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<Permission, boolean>> = {
   ]),
   'team-member': permissionSet(['readOnly']),
   mentor: permissionSet(['readOnly', 'viewReports']),
-  auditor: permissionSet(['readOnly', 'viewReports', 'exportReports']),
-  ca: permissionSet(['readOnly', 'viewReports', 'exportReports']),
+  auditor: permissionSet(['readOnly', 'viewReports']),
+  ca: permissionSet(['readOnly', 'viewReports']),
   investor: permissionSet(['readOnly', 'viewReports']),
 };
 

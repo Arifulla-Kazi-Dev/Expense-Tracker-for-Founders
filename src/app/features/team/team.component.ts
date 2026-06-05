@@ -55,6 +55,7 @@ export class TeamComponent implements OnDestroy {
   });
 
   errorMessage = '';
+  expandedMemberUid = '';
   isBusy = false;
   rolePickerMemberUid = '';
   pendingConfirm: TeamConfirmAction | null = null;
@@ -251,6 +252,18 @@ export class TeamComponent implements OnDestroy {
     return this.rolePickerMemberUid === member.uid;
   }
 
+  toggleMemberPanel(member: CompanyMember): void {
+    this.expandedMemberUid = this.expandedMemberUid === member.uid ? '' : member.uid;
+
+    if (this.expandedMemberUid !== member.uid) {
+      this.closeRolePicker();
+    }
+  }
+
+  isMemberExpanded(member: CompanyMember): boolean {
+    return this.expandedMemberUid === member.uid;
+  }
+
   rolePickerOptions(member: CompanyMember): UserRole[] {
     return this.invitableRoles.includes(member.role)
       ? this.invitableRoles
@@ -373,6 +386,16 @@ export class TeamComponent implements OnDestroy {
     const custom = Object.keys(member.permissionOverrides ?? {}).length;
 
     return `${enabled} edit area${enabled === 1 ? '' : 's'} enabled${custom ? `, ${custom} custom override${custom === 1 ? '' : 's'}` : ''}`;
+  }
+
+  memberAccessCompact(member: CompanyMember): string {
+    const enabled = PERMISSION_LABELS
+      .filter((item) => item.permission !== 'readOnly')
+      .filter((item) => this.permissionValue(member, item.permission))
+      .length;
+    const custom = Object.keys(member.permissionOverrides ?? {}).length;
+
+    return `${enabled} edit${enabled === 1 ? '' : 's'}${custom ? `, ${custom} custom` : ''}`;
   }
 
   permissionItem(permission: Permission): PermissionItem {

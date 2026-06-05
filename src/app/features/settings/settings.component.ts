@@ -6,6 +6,8 @@ import { LucideDynamicIcon } from '@lucide/angular';
 
 import { UserRole, roleDisplayName } from '../../core/models/role.model';
 import { AuthService } from '../../core/services/auth.service';
+import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
+import { LedgerExportFormat, LedgerExportService } from '../../core/services/ledger-export.service';
 
 @Component({
   selector: 'app-settings',
@@ -15,8 +17,12 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class SettingsComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
+  private readonly dashboardService = inject(DashboardService);
+  private readonly ledgerExportService = inject(LedgerExportService);
 
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
+  readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
+
   noticeMessage = '';
   private noticeTimer?: ReturnType<typeof setTimeout>;
 
@@ -24,8 +30,25 @@ export class SettingsComponent implements OnDestroy {
     return roleDisplayName(role);
   }
 
-  prepareExport(format: 'CSV' | 'JSON'): void {
-    this.noticeMessage = `${format} export prepared from live ledger records.`;
+  canExport(): boolean {
+    return this.ledgerExportService.canExport();
+  }
+
+  exportLedger(format: LedgerExportFormat): void {
+    try {
+      this.ledgerExportService.exportSummary(this.summary(), format, {
+        companyName: this.profile()?.companyName,
+        exportedBy: this.profile()?.name,
+        email: this.profile()?.email,
+      });
+      this.showNotice(`${format.toUpperCase()} export downloaded`);
+    } catch (error) {
+      this.showNotice(error instanceof Error ? error.message : 'Unable to export ledger');
+    }
+  }
+
+  private showNotice(message: string): void {
+    this.noticeMessage = message;
 
     if (this.noticeTimer) {
       clearTimeout(this.noticeTimer);
