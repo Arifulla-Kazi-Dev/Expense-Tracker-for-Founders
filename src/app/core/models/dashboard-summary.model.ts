@@ -32,6 +32,7 @@ export interface DashboardSummary {
   kpiMetrics: KpiMetric[];
   categorySpends: CategorySpend[];
   ledgerPayments: LedgerPayment[];
+  allLedgerPayments: LedgerPayment[];
   insightBars: InsightBar[];
   burnTrend: number[];
   monthlySpendTrend: MonthlyTrendPoint[];

@@ -49,6 +49,19 @@
       </div>
       <p class="mt-4 text-sm leading-6 text-slate-300">{{ runwayExplanation() }}</p>
 
+      <button
+        type="button"
+        class="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+        [disabled]="!canExport()"
+        (click)="exportLedger('pdf')"
+      >
+        <svg lucideIcon="file-text" class="size-4"></svg>
+        Export PDF report
+      </button>
+      @if (!canExport()) {
+        <p class="mt-2 text-xs leading-5 text-slate-400">PDF export needs export permission for this workspace.</p>
+      }
+
       <div class="mt-5 rounded-lg border border-white/10 bg-white/[0.06] p-4">
         <div class="flex h-3 overflow-hidden rounded-full bg-white/10">
           <div class="bg-teal-300" [style.width.%]="paidFundingShare()"></div>
@@ -134,7 +147,7 @@
     <app-spend-trend-chart
       [points]="summary().monthlySpendTrend"
       title="Monthly outflow curve"
-      description="This chart shows how real dated spend moves month by month. Use it to spot spikes, quiet months, and acceleration."
+      description="This chart shows how real dated spend moves by month and year. Use it to spot historical spikes, quiet periods, and acceleration."
     />
   </section>
 
@@ -216,3 +229,9 @@
     </article>
   </section>
 </main>
+
+@if (toastMessage) {
+  <div class="fixed bottom-20 left-1/2 z-50 w-[min(92vw,26rem)] -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 lg:bottom-6">
+    {{ toastMessage }}
+  </div>
+}

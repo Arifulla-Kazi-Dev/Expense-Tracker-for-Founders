@@ -25,13 +25,20 @@ export class SpendTrendChartComponent {
   @Input() compact = false;
   @Input() framed = true;
 
-  readonly viewBox = '0 0 640 300';
   private readonly left = 76;
   private readonly right = 24;
   private readonly top = 24;
   private readonly bottom = 52;
-  private readonly width = 640;
   private readonly height = 300;
+
+  get chartWidth(): number {
+    const pointCount = Math.max((this.points.length || this.emptyYear().length), 12);
+    return Math.max(640, this.left + this.right + (pointCount - 1) * 58);
+  }
+
+  get viewBox(): string {
+    return `0 0 ${this.chartWidth} ${this.height}`;
+  }
 
   get hasData(): boolean {
     return this.points.some((point) => point.amount > 0);
@@ -88,7 +95,7 @@ export class SpendTrendChartComponent {
   get chartPoints(): ChartPoint[] {
     const points = this.points.length ? this.points : this.emptyYear();
     const max = Math.max(...points.map((point) => point.amount), 1);
-    const chartWidth = this.width - this.left - this.right;
+    const chartWidth = this.chartWidth - this.left - this.right;
     const chartHeight = this.height - this.top - this.bottom;
     const step = points.length > 1 ? chartWidth / (points.length - 1) : chartWidth;
 
@@ -134,6 +141,17 @@ export class SpendTrendChartComponent {
     return points;
   }
 
+  labelLines(point: MonthlyTrendPoint): string[] {
+    if (!point.year) {
+      return [point.month];
+    }
+
+    return [
+      point.month.replace(` ${point.year}`, ''),
+      String(point.year),
+    ];
+  }
+
   barX(point: ChartPoint): number {
     return point.x - (this.compact ? 9 : 12);
   }
@@ -176,8 +194,13 @@ export class SpendTrendChartComponent {
   }
 
   private emptyYear(): MonthlyTrendPoint[] {
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month) => ({
-      month,
+    const year = new Date().getFullYear();
+
+    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => ({
+      month: `${month} ${year}`,
+      year,
+      monthIndex: index,
+      key: `${year}-${String(index + 1).padStart(2, '0')}`,
       amount: 0,
     }));
   }

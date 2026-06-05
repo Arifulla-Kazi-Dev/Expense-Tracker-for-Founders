@@ -99,6 +99,7 @@ export class FounderNotesComponent implements OnDestroy {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+    this.showToast('Live sync is active. Workspace notes update automatically.');
   }
 
   canEdit(): boolean {

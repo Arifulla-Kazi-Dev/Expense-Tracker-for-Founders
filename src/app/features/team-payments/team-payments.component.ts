@@ -126,6 +126,7 @@ export class TeamPaymentsComponent implements OnDestroy {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+    this.showToast('Live sync is active. Team payment records update automatically.');
   }
 
   canEdit(): boolean {

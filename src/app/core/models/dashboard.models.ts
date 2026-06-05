@@ -57,6 +57,9 @@ export interface InsightBar {
 export interface MonthlyTrendPoint {
   month: string;
   amount: number;
+  year?: number;
+  monthIndex?: number;
+  key?: string;
 }
 
 export interface SpendSource {

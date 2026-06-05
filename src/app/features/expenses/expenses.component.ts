@@ -115,6 +115,7 @@ export class ExpensesComponent implements OnDestroy {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+    this.showToast('Live sync is active. Expense records update automatically.');
   }
 
   canEdit(): boolean {

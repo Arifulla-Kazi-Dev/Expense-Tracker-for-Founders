@@ -51,6 +51,7 @@ export const emptyDashboardSummary: DashboardSummary = {
   kpiMetrics: [],
   categorySpends: [],
   ledgerPayments: [],
+  allLedgerPayments: [],
   insightBars: [],
   burnTrend: [],
   monthlySpendTrend: [],
@@ -137,7 +138,7 @@ export class DashboardService {
     const hasData = funding.length + expenses.length + teamPayments.length + startupCosts.length + recurringCosts.length + notes.length > 0;
     const categorySpends = this.categorySpends(expenses, startupCosts, recurringCosts);
     const insightBars = this.insightBars(categorySpends, totalExpenses);
-    const ledgerPayments = this.ledgerPayments(expenses, teamPayments, startupCosts, recurringCosts);
+    const allLedgerPayments = this.ledgerPayments(expenses, teamPayments, startupCosts, recurringCosts);
     const decisionNotes = this.decisionNotes(notes);
     const burnTrend = this.normalizedTrend(monthlySpendTrend);
     const fundingUtilization = this.fundingUtilization(funding, expenses, teamPayments, startupCosts, recurringCosts);
@@ -177,7 +178,8 @@ export class DashboardService {
       kpiMetrics: this.kpiMetrics(totalPaid, totalPending, remainingBalance, utilizationPercentage),
       categorySpends,
       insightBars,
-      ledgerPayments,
+      ledgerPayments: allLedgerPayments.slice(0, 8),
+      allLedgerPayments,
       burnTrend,
       monthlySpendTrend,
       spendSources: this.spendSources(totalExpenseRecords, totalStartupCosts, totalTeamPayments, totalRecurringCosts),
@@ -379,7 +381,7 @@ export class DashboardService {
         amount: item.amount,
         due: compactDate(item.nextBillingDate),
       })),
-    ].slice(0, 8);
+    ];
   }
 
   private decisionNotes(notes: FounderNote[]): DecisionNote[] {
@@ -397,19 +399,45 @@ export class DashboardService {
     teamPayments: TeamPayment[],
     recurringCosts: RecurringCost[],
   ): MonthlyTrendPoint[] {
-    const monthlyTotals = new Array<number>(12).fill(0);
+    const monthlyTotals = new Map<string, number>();
+    const datedEntries: Date[] = [];
+    const addTrendAmount = (value: string, amount: number, useCurrentMonthFallback = false): void => {
+      const date = parseDate(value) ?? (useCurrentMonthFallback ? startOfMonth(new Date()) : null);
 
-    expenses.forEach((item) => addMonthly(monthlyTotals, item.date || item.dueDate, item.amount, true));
-    startupCosts.forEach((item) => addMonthly(monthlyTotals, item.date, item.amount, true));
-    teamPayments.forEach((item) => addMonthly(monthlyTotals, item.month ? `${item.month}-01` : '', item.monthlyAmount, true));
+      if (!date) {
+        return;
+      }
+
+      const month = startOfMonth(date);
+      addToMap(monthlyTotals, monthKey(month), amount);
+      datedEntries.push(month);
+    };
+
+    expenses.forEach((item) => addTrendAmount(item.date || item.dueDate, item.amount, true));
+    startupCosts.forEach((item) => addTrendAmount(item.date, item.amount, true));
+    teamPayments.forEach((item) => addTrendAmount(item.month ? `${item.month}-01` : '', item.monthlyAmount, true));
     recurringCosts
       .filter((item) => item.isActive)
-      .forEach((item) => addMonthly(monthlyTotals, item.nextBillingDate, monthlyEquivalent(item.amount, item.billingCycle), true));
+      .forEach((item) => addTrendAmount(item.nextBillingDate, monthlyEquivalent(item.amount, item.billingCycle), true));
 
-    return monthlyTotals.map((amount, index) => ({
-      month: monthLabel(index),
-      amount,
-    }));
+    if (!datedEntries.length) {
+      const currentYear = new Date().getFullYear();
+
+      return Array.from({ length: 12 }, (_, index) => trendPoint(new Date(currentYear, index, 1), 0));
+    }
+
+    const sortedDates = datedEntries.sort((a, b) => a.getTime() - b.getTime());
+    const start = sortedDates[0];
+    const end = sortedDates[sortedDates.length - 1];
+    const points: MonthlyTrendPoint[] = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+
+    while (cursor <= end) {
+      points.push(trendPoint(cursor, monthlyTotals.get(monthKey(cursor)) ?? 0));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    return points;
   }
 
   private normalizedTrend(points: MonthlyTrendPoint[]): number[] {
@@ -598,21 +626,6 @@ function compactDate(value: string): string {
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(date);
 }
 
-function monthLabel(index: number): string {
-  const date = new Date(new Date().getFullYear(), index, 1);
-  return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date);
-}
-
-function addMonthly(monthlyTotals: number[], value: string, amount: number, useCurrentMonthFallback = false): void {
-  const date = parseDate(value) ?? (useCurrentMonthFallback ? startOfDay(new Date()) : null);
-
-  if (!date) {
-    return;
-  }
-
-  monthlyTotals[date.getMonth()] += amount;
-}
-
 function parseDate(value: string): Date | null {
   if (!value) {
     return null;
@@ -624,4 +637,24 @@ function parseDate(value: string): Date | null {
 
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function trendPoint(date: Date, amount: number): MonthlyTrendPoint {
+  const month = new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date);
+
+  return {
+    month: `${month} ${date.getFullYear()}`,
+    year: date.getFullYear(),
+    monthIndex: date.getMonth(),
+    key: monthKey(date),
+    amount,
+  };
 }

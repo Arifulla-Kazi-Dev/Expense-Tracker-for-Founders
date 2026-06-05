@@ -94,6 +94,7 @@ export class FundingComponent implements OnDestroy {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+    this.showToast('Live sync is active. Funding records update automatically.');
   }
 
   canEdit(): boolean {

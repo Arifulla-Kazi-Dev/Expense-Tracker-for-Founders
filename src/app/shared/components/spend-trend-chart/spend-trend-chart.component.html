@@ -30,7 +30,7 @@
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-slate-400">
           <span class="inline-flex items-center gap-2">
             <span class="size-2 rounded-full bg-amber-400"></span>
-            Monthly spend bars
+            Month-year spend bars
           </span>
           <span class="inline-flex items-center gap-2">
             <span class="size-2 rounded-full bg-teal-500"></span>
@@ -38,7 +38,8 @@
           </span>
         </div>
 
-        <svg class="w-full overflow-visible" [ngClass]="compact ? 'h-60' : 'h-80'" [attr.viewBox]="viewBox" role="img" [attr.aria-label]="title">
+        <div class="overflow-x-auto pb-2">
+        <svg class="overflow-visible" [ngClass]="compact ? 'h-60' : 'h-80'" [style.width.px]="chartWidth" [attr.viewBox]="viewBox" role="img" [attr.aria-label]="title">
           <defs>
             <linearGradient id="spendTrendArea" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.24" />
@@ -51,7 +52,7 @@
           </defs>
 
           @for (label of yAxisLabels; track $index) {
-            <line x1="76" x2="616" [attr.y1]="yAxisY($index)" [attr.y2]="yAxisY($index)" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="1" />
+            <line x1="76" [attr.x2]="chartWidth - 24" [attr.y1]="yAxisY($index)" [attr.y2]="yAxisY($index)" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="1" />
             <text x="0" [attr.y]="yAxisY($index) + 4" class="fill-slate-500 text-[11px] dark:fill-slate-400">
               {{ currencyINR(label) }}
             </text>
@@ -90,17 +91,20 @@
           }
 
           @for (point of monthLabels; track point.month) {
-            <text [attr.x]="point.x" y="280" text-anchor="middle" class="fill-slate-500 text-[11px] dark:fill-slate-400">
-              {{ point.month }}
+            <text [attr.x]="point.x" y="276" text-anchor="middle" class="fill-slate-500 text-[11px] dark:fill-slate-400">
+              @for (line of labelLines(point); track line) {
+                <tspan [attr.x]="point.x" [attr.dy]="$index === 0 ? 0 : 13">{{ line }}</tspan>
+              }
             </text>
           }
         </svg>
+        </div>
       </div>
 
       <aside class="grid gap-3">
         <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950/70">
           <p class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">How to read it</p>
-          <p class="mt-2 leading-6 text-slate-600 dark:text-slate-300">Tall bars show heavy spend months. A rising teal line means burn is accelerating between active months.</p>
+          <p class="mt-2 leading-6 text-slate-600 dark:text-slate-300">Tall bars show heavy spend months. Labels include the year, so historic spend is separated from current-year spend.</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950/70">
           <p class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Latest signal</p>

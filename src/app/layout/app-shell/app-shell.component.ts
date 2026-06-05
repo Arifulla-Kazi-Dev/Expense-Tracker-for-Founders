@@ -9,7 +9,9 @@ import { mobileNavigationItems, navigationItems } from '../../core/data/navigati
 import { NavigationItem } from '../../core/models/dashboard.models';
 import { CompanyMembership } from '../../core/models/company.model';
 import { AuthService } from '../../core/services/auth.service';
+import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { currencyINR } from '../../core/utils/finance-formatters';
 
 @Component({
   selector: 'app-shell',
@@ -37,10 +39,12 @@ export class AppShellComponent implements OnInit, OnDestroy {
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly authService = inject(AuthService);
+  private readonly dashboardService = inject(DashboardService);
   private readonly permissionService = inject(PermissionService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
   readonly user = toSignal(this.authService.user$, { initialValue: this.authService.currentUser });
+  readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
   readonly profileSyncError = toSignal(this.authService.profileSyncError$, { initialValue: '' });
   readonly memberships = toSignal(this.permissionService.memberships$, { initialValue: [] as CompanyMembership[] });
   readonly activeCompanyId = toSignal(this.permissionService.activeCompanyId$, { initialValue: null });
@@ -76,6 +80,82 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   visibleMobileNavigationItems(): NavigationItem[] {
     return mobileNavigationItems.filter((item) => this.canAccessNavigationItem(item));
+  }
+
+  get searchResults(): SearchResult[] {
+    const query = this.globalSearch.trim().toLowerCase();
+
+    if (query.length < 2) {
+      return [];
+    }
+
+    const summary = this.summary();
+    const results: SearchResult[] = [];
+    const addResult = (result: SearchResult, searchableParts: Array<string | number | null | undefined>): void => {
+      const searchable = searchableParts.join(' ').toLowerCase();
+
+      if (searchable.includes(query)) {
+        results.push(result);
+      }
+    };
+
+    summary.fundingUtilization.forEach((source) => {
+      addResult({
+        title: source.sourceName,
+        detail: `${source.type} funding - ${currencyINR(source.remaining)} left`,
+        route: '/funding',
+        icon: source.icon,
+        type: 'Funding',
+      }, [source.sourceName, source.type, source.received, source.remaining, source.utilized]);
+    });
+
+    const paymentRecords = summary.allLedgerPayments.length ? summary.allLedgerPayments : summary.ledgerPayments;
+
+    paymentRecords.forEach((payment) => {
+      addResult({
+        title: payment.title,
+        detail: `${payment.status} - ${currencyINR(payment.amount)} - ${payment.due}`,
+        route: this.paymentRoute(payment.category),
+        icon: this.paymentIcon(payment.category),
+        type: 'Payment',
+      }, [payment.title, payment.owner, payment.category, payment.status, payment.amount, payment.due]);
+    });
+
+    summary.categorySpends.forEach((category) => {
+      addResult({
+        title: category.label,
+        detail: `${currencyINR(category.amount)} category spend`,
+        route: '/reports',
+        icon: category.icon,
+        type: 'Category',
+      }, [category.label, category.amount]);
+    });
+
+    summary.monthlySpendTrend.forEach((point) => {
+      if (point.amount <= 0) {
+        return;
+      }
+
+      addResult({
+        title: point.month,
+        detail: `${currencyINR(point.amount)} monthly outflow`,
+        route: '/reports',
+        icon: 'line-chart',
+        type: 'Trend',
+      }, [point.month, point.amount]);
+    });
+
+    summary.decisionNotes.forEach((note) => {
+      addResult({
+        title: note.title,
+        detail: `${note.priority} priority - ${note.date}`,
+        route: '/founder-notes',
+        icon: 'notebook-text',
+        type: 'Note',
+      }, [note.title, note.priority, note.outcome, note.date]);
+    });
+
+    return results.slice(0, 8);
   }
 
   toggleMobileMenu(): void {
@@ -225,6 +305,10 @@ export class AppShellComponent implements OnInit, OnDestroy {
     }, 2200);
   }
 
+  clearGlobalSearch(): void {
+    this.globalSearch = '';
+  }
+
   private applyTheme(): void {
     if (!this.isBrowser) {
       return;
@@ -238,9 +322,53 @@ export class AppShellComponent implements OnInit, OnDestroy {
     return !item.permission || this.permissionService.can(item.permission);
   }
 
+  private paymentRoute(category: string): string {
+    const normalized = category.toLowerCase();
+
+    if (['intern', 'employee', 'freelancer', 'consultant'].some((value) => normalized.includes(value))) {
+      return '/team-payments';
+    }
+
+    if (normalized.includes('one-time')) {
+      return '/startup-costs';
+    }
+
+    if (['monthly', 'quarterly', 'yearly'].some((value) => normalized.includes(value))) {
+      return '/recurring-costs';
+    }
+
+    return '/expenses';
+  }
+
+  private paymentIcon(category: string): string {
+    const route = this.paymentRoute(category);
+
+    if (route === '/team-payments') {
+      return 'users';
+    }
+
+    if (route === '/startup-costs') {
+      return 'building-2';
+    }
+
+    if (route === '/recurring-costs') {
+      return 'repeat-2';
+    }
+
+    return 'receipt-text';
+  }
+
   private clearTimer(timer?: ReturnType<typeof setTimeout>): void {
     if (timer) {
       clearTimeout(timer);
     }
   }
+}
+
+interface SearchResult {
+  title: string;
+  detail: string;
+  route: string;
+  icon: string;
+  type: string;
 }

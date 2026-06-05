@@ -299,6 +299,12 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     return badgeClass(status);
   }
 
+  secondaryIcon(): string {
+    return this.feature.secondaryAction.toLowerCase().includes('real')
+      ? 'repeat-2'
+      : 'download';
+  }
+
   private buildForm(): void {
     const controls: Record<string, FormControl<FeatureFormValue>> = {};
 

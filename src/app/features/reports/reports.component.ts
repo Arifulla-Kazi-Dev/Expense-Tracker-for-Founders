@@ -1,10 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { AuthService } from '../../core/services/auth.service';
+import { LedgerExportFormat, LedgerExportService } from '../../core/services/ledger-export.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { progressClass, softTextClass, tonePanelClass } from '../../core/utils/ui-classnames';
 import { CategorySpend, SpendSource, Tone } from '../../core/models/dashboard.models';
@@ -16,10 +18,22 @@ import { SpendTrendChartComponent } from '../../shared/components/spend-trend-ch
   imports: [CommonModule, LucideDynamicIcon, SpendTrendChartComponent],
   templateUrl: './reports.component.html',
 })
-export class ReportsComponent {
+export class ReportsComponent implements OnDestroy {
+  private readonly authService = inject(AuthService);
   private readonly dashboardService = inject(DashboardService);
+  private readonly ledgerExportService = inject(LedgerExportService);
 
   readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
+  readonly profile = toSignal(this.authService.profile$, { initialValue: null });
+
+  toastMessage = '';
+  private toastTimer?: ReturnType<typeof setTimeout>;
+
+  ngOnDestroy(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
 
   currencyINR(value: number): string {
     return currencyINR(value);
@@ -212,5 +226,34 @@ export class ReportsComponent {
     }
 
     return `${topCategory.label} is currently the largest bucket at ${this.currencyINR(topCategory.amount)}, representing ${this.topCategoryShare()}% of all tracked spend.`;
+  }
+
+  canExport(): boolean {
+    return this.ledgerExportService.canExport();
+  }
+
+  exportLedger(format: LedgerExportFormat): void {
+    try {
+      this.ledgerExportService.exportSummary(this.summary(), format, {
+        companyName: this.profile()?.companyName,
+        exportedBy: this.profile()?.name,
+        email: this.profile()?.email,
+      });
+      this.showToast(`${format.toUpperCase()} report downloaded`);
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Unable to export report');
+    }
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage = message;
+
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+    }, 2200);
   }
 }

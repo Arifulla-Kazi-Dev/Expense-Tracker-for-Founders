@@ -168,6 +168,15 @@
           <svg lucideIcon="file-text" class="size-4"></svg>
           Export CSV
         </button>
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+          [disabled]="!canExport()"
+          (click)="exportLedger('pdf')"
+        >
+          <svg lucideIcon="file-text" class="size-4"></svg>
+          Export PDF
+        </button>
       </div>
     </div>
 

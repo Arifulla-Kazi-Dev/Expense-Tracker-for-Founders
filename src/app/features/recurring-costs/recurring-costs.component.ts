@@ -106,6 +106,7 @@ export class RecurringCostsComponent implements OnDestroy {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+    this.showToast('Live sync is active. Recurring costs update automatically.');
   }
 
   canEdit(): boolean {

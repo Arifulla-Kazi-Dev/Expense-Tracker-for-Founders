@@ -109,6 +109,7 @@ export class StartupCostsComponent implements OnDestroy {
 
   acknowledgeRealtime(): void {
     this.errorMessage = '';
+    this.showToast('Live sync is active. Startup costs update automatically.');
   }
 
   canEdit(): boolean {
