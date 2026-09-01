@@ -131,6 +131,7 @@ export const categorySpends: CategorySpend[] = [
 
 export const ledgerPayments: LedgerPayment[] = [
   {
+    id: 'demo-cloud-infrastructure',
     title: 'Cloud infrastructure placeholder',
     owner: 'Infrastructure',
     category: 'Recurring Costs',
@@ -139,6 +140,7 @@ export const ledgerPayments: LedgerPayment[] = [
     due: 'Jun 05',
   },
   {
+    id: 'demo-owner-legal-agreement',
     title: 'Owner legal agreement',
     owner: 'Compliance partner',
     category: 'Legal & Compliance',
@@ -147,6 +149,7 @@ export const ledgerPayments: LedgerPayment[] = [
     due: 'Jun 08',
   },
   {
+    id: 'demo-product-qa-intern-stipend',
     title: 'Product QA intern stipend',
     owner: 'Aarav Mehta',
     category: 'Team Payments',
@@ -155,6 +158,7 @@ export const ledgerPayments: LedgerPayment[] = [
     due: 'Jun 10',
   },
   {
+    id: 'demo-codex-plan',
     title: 'Codex plan',
     owner: 'AI Development',
     category: 'AI Tools',
@@ -163,6 +167,7 @@ export const ledgerPayments: LedgerPayment[] = [
     due: 'Jun 12',
   },
   {
+    id: 'demo-trademark-search',
     title: 'Trademark search',
     owner: 'Legal vendor',
     category: 'Startup Costs',

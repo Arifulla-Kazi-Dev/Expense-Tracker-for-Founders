@@ -87,6 +87,10 @@ service cloud.firestore {
       return hasPermission(companyId, 'manageFounderNotes', ['founder', 'cofounder', 'operations-manager']);
     }
 
+    function isNonNegative(value) {
+      return value == null || ((value is int || value is float) && value >= 0);
+    }
+
     function canManageMembers(companyId) {
       return hasPermission(companyId, 'manageMembers', ['founder', 'cofounder']);
     }
@@ -326,27 +330,50 @@ service cloud.firestore {
 
       match /funding/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageFinance(companyId);
+        allow create, update: if canManageFinance(companyId)
+          && isNonNegative(request.resource.data.get('amount', 0));
+        allow delete: if canManageFinance(companyId);
       }
 
       match /expenses/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageExpenses(companyId);
+        allow create, update: if canManageExpenses(companyId)
+          && isNonNegative(request.resource.data.get('amount', 0))
+          && isNonNegative(request.resource.data.get('paidAmount', 0))
+          && isNonNegative(request.resource.data.get('pendingAmount', 0));
+        allow delete: if canManageExpenses(companyId);
       }
 
       match /startupCosts/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageStartupCosts(companyId);
+        allow create, update: if canManageStartupCosts(companyId)
+          && isNonNegative(request.resource.data.get('amount', 0))
+          && isNonNegative(request.resource.data.get('paidAmount', 0))
+          && isNonNegative(request.resource.data.get('pendingAmount', 0));
+        allow delete: if canManageStartupCosts(companyId);
       }
 
       match /recurringCosts/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageRecurringCosts(companyId);
+        allow create, update: if canManageRecurringCosts(companyId)
+          && isNonNegative(request.resource.data.get('amount', 0));
+        allow delete: if canManageRecurringCosts(companyId);
+      }
+
+      match /recurringCostCharges/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow create, update: if canManageRecurringCosts(companyId)
+          && isNonNegative(request.resource.data.get('amount', 0));
+        allow delete: if canManageRecurringCosts(companyId);
       }
 
       match /teamPayments/{docId} {
         allow read: if isCompanyMember(companyId);
-        allow write: if canManageTeamPayments(companyId);
+        allow create, update: if canManageTeamPayments(companyId)
+          && isNonNegative(request.resource.data.get('monthlyAmount', 0))
+          && isNonNegative(request.resource.data.get('paidAmount', 0))
+          && isNonNegative(request.resource.data.get('pendingAmount', 0));
+        allow delete: if canManageTeamPayments(companyId);
       }
 
       match /founderNotes/{docId} {

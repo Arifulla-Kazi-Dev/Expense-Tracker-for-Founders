@@ -1,5 +1,5 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { EnvironmentInjector, Injectable, PLATFORM_ID, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   Timestamp,
@@ -27,6 +27,7 @@ export class InviteService {
   private readonly firestore = inject(Firestore);
   private readonly authService = inject(AuthService);
   private readonly companyService = inject(CompanyService);
+  private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
@@ -38,15 +39,17 @@ export class InviteService {
         return of([]);
       }
 
-      const invitesRef = collection(this.firestore, `companies/${companyId}/invites`);
-      return collectionSnapshots(query(invitesRef, orderBy('createdAt', 'desc'))).pipe(
-        map((snapshots) => snapshots.map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as CompanyInvite)),
-        tap((invites) => void this.ensureInviteLookups(invites)),
-        catchError((error) => {
-          console.error('Invites load failed', error);
-          return of([]);
-        }),
-      );
+      return runInInjectionContext(this.environmentInjector, () => {
+        const invitesRef = collection(this.firestore, `companies/${companyId}/invites`);
+        return collectionSnapshots(query(invitesRef, orderBy('createdAt', 'desc'))).pipe(
+          map((snapshots) => snapshots.map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as CompanyInvite)),
+          tap((invites) => void this.ensureInviteLookups(invites)),
+          catchError((error) => {
+            console.error('Invites load failed', error);
+            return of([]);
+          }),
+        );
+      });
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );

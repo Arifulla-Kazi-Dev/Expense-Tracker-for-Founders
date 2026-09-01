@@ -1,10 +1,21 @@
-<main class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.12),transparent_28rem),linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-5 text-slate-950 transition-colors dark:bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.12),transparent_28rem),linear-gradient(180deg,#020617_0%,#0f172a_100%)] dark:text-slate-100">
-  <nav class="mx-auto flex w-full max-w-6xl items-center justify-between rounded-lg border border-white/70 bg-white/85 px-3 py-2 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/70" aria-label="Authentication navigation">
+<main class="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.16),transparent_30rem),radial-gradient(circle_at_bottom_right,rgba(99,102,241,0.10),transparent_32rem),linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-5 text-slate-950 transition-colors dark:bg-[radial-gradient(circle_at_top_left,rgba(167,139,250,0.16),transparent_30rem),radial-gradient(circle_at_bottom_right,rgba(129,140,248,0.10),transparent_32rem),linear-gradient(180deg,#020617_0%,#0f172a_100%)] dark:text-slate-100">
+  <div class="pointer-events-none absolute -left-24 top-10 size-72 rounded-full bg-violet-400/20 blur-3xl animate-float-soft dark:bg-violet-500/10"></div>
+  <div class="pointer-events-none absolute -right-20 bottom-0 size-80 rounded-full bg-indigo-300/20 blur-3xl animate-float-soft dark:bg-indigo-500/10" style="animation-delay: 1.5s"></div>
+
+  <nav class="relative mx-auto flex w-full max-w-6xl items-center justify-between rounded-2xl border border-white/70 bg-white/85 px-3 py-2 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/70" aria-label="Authentication navigation">
     <div class="flex min-w-0 items-center gap-2">
       <img src="logo.svg" alt="" class="size-10 rounded-lg shadow-sm">
       <span class="truncate text-sm font-semibold sm:text-base">Startup Expense OS</span>
     </div>
     <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+        aria-label="Toggle theme"
+        (click)="toggleTheme()"
+      >
+        <svg [lucideIcon]="isDarkMode ? 'sun' : 'moon'" class="size-4"></svg>
+      </button>
       <span class="hidden text-sm text-slate-500 sm:inline dark:text-slate-400">Already joined?</span>
       <a
         routerLink="/login"
@@ -16,59 +27,61 @@
     </div>
   </nav>
 
-  <section class="mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-6xl items-center gap-5 py-6 lg:grid-cols-[0.95fr_1.05fr]">
-    <aside class="hidden overflow-hidden rounded-lg border border-slate-200 bg-slate-950 p-8 text-white shadow-sm lg:block dark:border-slate-800">
-      <div class="inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-xs font-semibold text-teal-100">
+  <section class="relative mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-6xl items-center gap-5 py-6 lg:grid-cols-[1.05fr_0.95fr]">
+    <aside class="animate-fade-in hidden overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 p-10 text-white shadow-xl lg:block dark:border-slate-800">
+      <div class="inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-xs font-semibold text-violet-100">
         <svg lucideIcon="building-2" class="size-3.5"></svg>
         Workspace setup
       </div>
-      <h1 class="mt-6 max-w-md text-4xl font-semibold leading-tight">
+      <h1 class="mt-8 max-w-md text-4xl font-semibold leading-tight">
         {{ isInviteFlow ? 'Join the company without creating a duplicate workspace.' : 'Create your company finance command center.' }}
       </h1>
       <p class="mt-4 max-w-lg text-sm leading-6 text-slate-300">
         {{ isInviteFlow ? 'Invite links lock the company and role so members land in the correct workspace.' : 'The first account becomes owner and creates the company profile, member record, and cloud ledger root.' }}
       </p>
 
-      <div class="mt-10 grid gap-3 text-sm text-slate-300">
-        <div class="flex items-center gap-2"><svg lucideIcon="shield-check" class="size-4"></svg> Company-scoped access</div>
-        <div class="flex items-center gap-2"><svg lucideIcon="wallet" class="size-4"></svg> Funding and spend tracking</div>
-        <div class="flex items-center gap-2"><svg lucideIcon="users" class="size-4"></svg> Team roles and permissions</div>
+      <div class="mt-10 grid gap-3 stagger">
+        <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-400/15 text-violet-200"><svg lucideIcon="shield-check" class="size-5"></svg></span>
+          <p class="text-sm font-semibold">Company-scoped access & roles</p>
+        </div>
+        <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-400/15 text-indigo-200"><svg lucideIcon="wallet" class="size-5"></svg></span>
+          <p class="text-sm font-semibold">Funding, burn, and runway tracking</p>
+        </div>
+        <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/15 text-sky-200"><svg lucideIcon="sparkles" class="size-5"></svg></span>
+          <p class="text-sm font-semibold">Guided setup after you sign up</p>
+        </div>
       </div>
     </aside>
 
-    <div class="rounded-lg border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur sm:p-8 dark:border-slate-800 dark:bg-slate-900/85">
-      <div class="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-sm font-semibold dark:border-slate-800 dark:bg-slate-950">
-        <a
-          routerLink="/login"
-          [queryParams]="loginQueryParams"
-          class="inline-flex h-10 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
-        >
-          Sign in
-        </a>
-        <span class="inline-flex h-10 items-center justify-center rounded-md bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white">Create account</span>
+    <div class="animate-rise-in mx-auto w-full max-w-md rounded-3xl border border-white/70 bg-white/90 p-6 shadow-xl backdrop-blur sm:p-8 dark:border-slate-800 dark:bg-slate-900/85">
+      <div class="flex justify-center lg:hidden">
+        <img src="logo.svg" alt="" class="size-14 rounded-2xl shadow-sm">
       </div>
 
-      <div class="mt-8">
-        <p class="text-sm font-semibold text-teal-700 dark:text-teal-300">{{ isInviteFlow ? 'Accept invite' : 'Create account' }}</p>
-        <h2 class="mt-2 text-3xl font-semibold tracking-normal">{{ isInviteFlow ? 'Join the company workspace' : 'Start your company workspace' }}</h2>
+      <div class="mt-4 lg:mt-0">
+        <p class="text-sm font-semibold text-violet-700 dark:text-violet-300">{{ isInviteFlow ? 'Accept invite' : 'Create account' }}</p>
+        <h2 class="mt-2 text-3xl font-semibold tracking-tight">{{ isInviteFlow ? 'Join the company workspace' : 'Start your company workspace' }}</h2>
         <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-          {{ isInviteFlow ? 'Your company and role come from the invite link. Add your name and sign in method to continue.' : 'Use this page only for a new workspace or a missing cloud profile setup.' }}
+          {{ isInviteFlow ? 'Your company and role come from the invite link. Confirm the details, then continue with Google.' : 'Name your workspace, then continue with Google to create it.' }}
         </p>
       </div>
 
       @if (setupReason === 'setup') {
-        <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
+        <div class="animate-fade-in mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
           <div class="flex items-start gap-3">
             <svg lucideIcon="info" class="mt-0.5 size-4 shrink-0"></svg>
             <div>
               <p class="font-semibold">Workspace setup required</p>
-              <p class="mt-1 leading-5">Your sign-in account exists, but no company workspace profile was found. Create or join a workspace to continue.</p>
+              <p class="mt-1 leading-5">Your Google account exists, but no company workspace profile was found. Create or join a workspace to continue.</p>
             </div>
           </div>
         </div>
       }
 
-      <div class="mt-5 rounded-lg border px-4 py-3 text-sm" [ngClass]="invitePanelClass()">
+      <div class="mt-5 rounded-2xl border px-4 py-3 text-sm" [ngClass]="invitePanelClass()">
         <div class="flex items-start gap-3">
           <svg [lucideIcon]="inviteError ? 'alert-circle' : 'shield-check'" class="mt-0.5 size-4 shrink-0"></svg>
           <div>
@@ -89,63 +102,42 @@
         </div>
       </div>
 
-      <form class="mt-7 grid gap-4" [formGroup]="form" (ngSubmit)="register()">
-        <div class="grid gap-4 sm:grid-cols-2">
-          <label class="grid gap-2 text-sm font-semibold">
-            {{ nameLabel }}
-            <div class="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
-              <svg lucideIcon="user" class="size-4 text-slate-400"></svg>
-              <input formControlName="name" type="text" autocomplete="name" class="w-full bg-transparent text-sm outline-none" [placeholder]="namePlaceholder">
-            </div>
-          </label>
-
-          @if (isInviteFlow) {
-            <label class="grid gap-2 text-sm font-semibold">
-              Assigned role
-              <div class="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
-                <svg lucideIcon="shield-check" class="size-4 text-slate-400"></svg>
-                <input type="text" class="w-full bg-transparent text-sm outline-none" [value]="roleLabel" disabled>
-              </div>
-            </label>
-          } @else {
-            <label class="grid gap-2 text-sm font-semibold">
-              Company name
-              <div class="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
-                <svg lucideIcon="building" class="size-4 text-slate-400"></svg>
-                <input formControlName="companyName" type="text" class="w-full bg-transparent text-sm outline-none" placeholder="Startup name">
-              </div>
-            </label>
-          }
-        </div>
+      <form class="mt-6 grid gap-4" [formGroup]="form" (ngSubmit)="registerWithGoogle()">
+        <label class="grid gap-2 text-sm font-semibold">
+          {{ isInviteFlow ? 'Your name' : 'Your name (optional)' }}
+          <div class="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-950">
+            <svg lucideIcon="user" class="size-4 text-slate-400"></svg>
+            <input formControlName="name" type="text" autocomplete="name" class="w-full bg-transparent text-sm outline-none" placeholder="Defaults to your Google name">
+          </div>
+        </label>
 
         @if (isInviteFlow) {
           <label class="grid gap-2 text-sm font-semibold">
-            Company name
-            <div class="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
+            Company
+            <div class="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
               <svg lucideIcon="building" class="size-4 text-slate-400"></svg>
               <input formControlName="companyName" type="text" class="w-full bg-transparent text-sm outline-none" placeholder="Company from invite">
             </div>
           </label>
+          <label class="grid gap-2 text-sm font-semibold">
+            Assigned role
+            <div class="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
+              <svg lucideIcon="shield-check" class="size-4 text-slate-400"></svg>
+              <input type="text" class="w-full bg-transparent text-sm outline-none" [value]="roleLabel" disabled>
+            </div>
+          </label>
+        } @else {
+          <label class="grid gap-2 text-sm font-semibold">
+            Company name
+            <div class="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-950">
+              <svg lucideIcon="building" class="size-4 text-slate-400"></svg>
+              <input formControlName="companyName" type="text" class="w-full bg-transparent text-sm outline-none" placeholder="Your startup name">
+            </div>
+          </label>
         }
 
-        <label class="grid gap-2 text-sm font-semibold">
-          Email
-          <div class="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
-            <svg lucideIcon="mail" class="size-4 text-slate-400"></svg>
-            <input formControlName="email" type="email" autocomplete="email" class="w-full bg-transparent text-sm outline-none" placeholder="raj@startup.com">
-          </div>
-        </label>
-
-        <label class="grid gap-2 text-sm font-semibold">
-          Password
-          <div class="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 transition focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-950">
-            <svg lucideIcon="lock-keyhole" class="size-4 text-slate-400"></svg>
-            <input formControlName="password" type="password" autocomplete="new-password" class="w-full bg-transparent text-sm outline-none" placeholder="At least 6 characters">
-          </div>
-        </label>
-
         @if (errorMessage) {
-          <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100" role="alert">
+          <div class="animate-fade-in rounded-2xl border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100" role="alert">
             <div class="flex items-start gap-2">
               <svg lucideIcon="alert-circle" class="mt-0.5 size-4 shrink-0"></svg>
               <div>
@@ -158,31 +150,27 @@
 
         <button
           type="submit"
-          class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+          class="group inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600"
           [disabled]="!canSubmit"
         >
           @if (isSubmitting) {
-            <svg lucideIcon="loader-circle" class="size-4 animate-spin"></svg>
+            <svg lucideIcon="loader-circle" class="size-5 animate-spin"></svg>
+            {{ isInviteFlow ? 'Joining workspace...' : 'Creating workspace...' }}
           } @else {
-            <svg lucideIcon="save" class="size-4"></svg>
+            <svg viewBox="0 0 48 48" class="size-5" aria-hidden="true">
+              <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+              <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+              <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+              <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+            </svg>
+            {{ isInviteFlow ? 'Join with Google' : 'Create workspace with Google' }}
           }
-          {{ isInviteFlow ? 'Join workspace' : 'Create workspace' }}
         </button>
       </form>
 
-      <button
-        type="button"
-        class="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
-        [disabled]="!canSubmit"
-        (click)="registerWithGoogle()"
-      >
-        <svg lucideIcon="sparkles" class="size-4"></svg>
-        Continue with Google
-      </button>
-
       <p class="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
         Already have a workspace profile?
-        <a routerLink="/login" [queryParams]="loginQueryParams" class="font-semibold text-slate-950 hover:text-teal-700 dark:text-white dark:hover:text-teal-300">Sign in instead</a>
+        <a routerLink="/login" [queryParams]="loginQueryParams" class="font-semibold text-slate-950 hover:text-violet-700 dark:text-white dark:hover:text-violet-300">Sign in instead</a>
       </p>
     </div>
   </section>

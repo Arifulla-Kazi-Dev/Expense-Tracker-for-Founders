@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -17,12 +17,28 @@ import {
   softTextClass,
   tonePanelClass,
 } from '../../core/utils/ui-classnames';
+import { ChartDatum } from '../../shared/components/charts/chart-theme';
+import { FinanceBarComponent } from '../../shared/components/charts/finance-bar.component';
+import { FinanceDonutComponent } from '../../shared/components/charts/finance-donut.component';
+import {
+  FundingUtilizationChartComponent,
+  FundingUtilizationDatum,
+} from '../../shared/components/charts/funding-utilization-chart.component';
 import { SpendTrendChartComponent } from '../../shared/components/spend-trend-chart/spend-trend-chart.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideDynamicIcon, RouterLink, SpendTrendChartComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    LucideDynamicIcon,
+    RouterLink,
+    SpendTrendChartComponent,
+    FinanceBarComponent,
+    FinanceDonutComponent,
+    FundingUtilizationChartComponent,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -63,6 +79,45 @@ export class DashboardComponent implements OnDestroy {
   get topCategory() {
     return this.summary().categorySpends[0] ?? null;
   }
+
+  // These feed Chart.js components via a signal `input()`, which compares by
+  // reference. A plain getter would build a new array on every change-detection
+  // check (even when nothing changed), making the chart think its data changed
+  // constantly and destroy/recreate itself before a frame ever paints. `computed()`
+  // only recomputes when `summary()` itself actually changes, so the reference
+  // stays stable in between.
+  readonly categoryChartData = computed<ChartDatum[]>(() =>
+    this.summary().categorySpends.map((category) => ({
+      name: category.label,
+      value: category.amount,
+      tone: category.tone,
+    })),
+  );
+
+  readonly spendSourceChartData = computed<ChartDatum[]>(() =>
+    this.summary().spendSources.map((source) => ({
+      name: source.label,
+      value: source.amount,
+      tone: source.tone,
+    })),
+  );
+
+  readonly cashAllocationChartData = computed<ChartDatum[]>(() => {
+    const summary = this.summary();
+    return [
+      { name: 'Paid spend', value: summary.totalPaid, tone: 'teal' },
+      { name: 'Pending', value: summary.totalPending, tone: 'amber' },
+      { name: 'Available cash', value: summary.remainingBalance, tone: 'emerald' },
+    ].filter((datum) => datum.value > 0) as ChartDatum[];
+  });
+
+  readonly fundingUtilizationChartData = computed<FundingUtilizationDatum[]>(() =>
+    this.summary().fundingUtilization.map((source) => ({
+      name: source.sourceName,
+      used: source.utilized,
+      remaining: source.remaining,
+    })),
+  );
 
   get keyMetrics() {
     return this.summary().founderMetrics.slice(0, 8);

@@ -141,7 +141,7 @@ export class TeamComponent implements OnDestroy {
 
   inviteRoleClass(role: UserRole): string {
     return this.isInviteRoleSelected(role)
-      ? 'border-teal-400 bg-teal-50 text-slate-950 ring-2 ring-teal-500/20 dark:border-teal-400/60 dark:bg-teal-400/10 dark:text-white'
+      ? 'border-violet-400 bg-violet-50 text-slate-950 ring-2 ring-violet-500/20 dark:border-violet-400/60 dark:bg-violet-400/10 dark:text-white'
       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900';
   }
 
@@ -272,7 +272,7 @@ export class TeamComponent implements OnDestroy {
 
   roleOptionClass(member: CompanyMember, role: UserRole): string {
     return role === member.role
-      ? 'border-teal-300 bg-teal-50 text-slate-950 ring-2 ring-teal-500/15 dark:border-teal-400/40 dark:bg-teal-400/10 dark:text-white'
+      ? 'border-violet-300 bg-violet-50 text-slate-950 ring-2 ring-violet-500/15 dark:border-violet-400/40 dark:bg-violet-400/10 dark:text-white'
       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900';
   }
 
@@ -421,7 +421,7 @@ export class TeamComponent implements OnDestroy {
   permissionToggleClass(member: CompanyMember, permission: Permission): string {
     if (this.permissionValue(member, permission)) {
       return this.isPermissionOverride(member, permission)
-        ? 'border-teal-200 bg-teal-50 text-teal-800 ring-teal-100 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-100 dark:ring-teal-400/20'
+        ? 'border-violet-200 bg-violet-50 text-violet-800 ring-violet-100 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100 dark:ring-violet-400/20'
         : 'border-slate-200 bg-slate-100 text-slate-700 ring-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700';
     }
 

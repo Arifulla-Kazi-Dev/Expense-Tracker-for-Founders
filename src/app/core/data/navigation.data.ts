@@ -2,6 +2,7 @@ import { NavigationItem } from '../models/dashboard.models';
 
 export const navigationItems: NavigationItem[] = [
   { label: 'Dashboard', icon: 'layout-dashboard', route: '/dashboard' },
+  { label: 'Get Started', icon: 'rocket', route: '/follow-up' },
   { label: 'Funding', icon: 'wallet', route: '/funding' },
   { label: 'Expenses', icon: 'receipt-text', route: '/expenses' },
   { label: 'Salaries', icon: 'users', route: '/team-payments' },

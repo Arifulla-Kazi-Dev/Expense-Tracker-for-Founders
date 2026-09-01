@@ -20,6 +20,14 @@ export class ExpenseService {
     return this.crud.update<ExpenseInput>(this.collectionName, id, data);
   }
 
+  markPaid(id: string, amount: number) {
+    return this.crud.update<Expense>(this.collectionName, id, {
+      paymentStatus: 'Paid',
+      paidAmount: amount,
+      pendingAmount: 0,
+    });
+  }
+
   delete(id: string) {
     return this.crud.delete(this.collectionName, id);
   }

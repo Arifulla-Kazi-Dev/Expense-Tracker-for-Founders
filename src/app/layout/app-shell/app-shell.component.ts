@@ -1,9 +1,10 @@
-import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Component, OnDestroy, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { LucideDynamicIcon } from '@lucide/angular';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Subscription, distinctUntilChanged, filter, map, startWith } from 'rxjs';
 
 import { mobileNavigationItems, navigationItems } from '../../core/data/navigation.data';
 import { NavigationItem } from '../../core/models/dashboard.models';
@@ -11,6 +12,8 @@ import { CompanyMembership } from '../../core/models/company.model';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { RecurringBillingService } from '../../core/services/recurring-billing.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 
 @Component({
@@ -20,14 +23,13 @@ import { currencyINR } from '../../core/utils/finance-formatters';
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
 })
-export class AppShellComponent implements OnInit, OnDestroy {
+export class AppShellComponent implements OnDestroy {
   readonly title = 'Startup Expense OS';
   readonly navigationItems = navigationItems;
   readonly mobileNavigationItems = mobileNavigationItems;
   readonly currentDateLabel = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date());
 
   globalSearch = '';
-  isDarkMode = false;
   isCompanySwitcherOpen = false;
   isMobileMenuOpen = false;
   isRetryingProfileSync = false;
@@ -36,13 +38,21 @@ export class AppShellComponent implements OnInit, OnDestroy {
   isSyncing = false;
   toastMessage = '';
 
-  private readonly document = inject(DOCUMENT);
-  private readonly platformId = inject(PLATFORM_ID);
   private readonly authService = inject(AuthService);
   private readonly dashboardService = inject(DashboardService);
   private readonly permissionService = inject(PermissionService);
-  private readonly isBrowser = isPlatformBrowser(this.platformId);
+  private readonly recurringBillingService = inject(RecurringBillingService);
+  private readonly themeService = inject(ThemeService);
+  private readonly router = inject(Router);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
+  readonly pageTitle = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map(() => this.resolvePageTitle()),
+      startWith(this.resolvePageTitle()),
+    ),
+    { initialValue: this.resolvePageTitle() },
+  );
   readonly user = toSignal(this.authService.user$, { initialValue: this.authService.currentUser });
   readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
   readonly profileSyncError = toSignal(this.authService.profileSyncError$, { initialValue: '' });
@@ -51,27 +61,43 @@ export class AppShellComponent implements OnInit, OnDestroy {
   readonly activeMembership = toSignal(this.permissionService.activeMembership$, { initialValue: null });
   private toastTimer?: ReturnType<typeof setTimeout>;
   private syncTimer?: ReturnType<typeof setTimeout>;
+  private readonly billingSubscription: Subscription;
 
-  ngOnInit(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    const savedTheme = localStorage.getItem('expense-tracker-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    this.isDarkMode = savedTheme ? savedTheme === 'dark' : prefersDark;
-    this.applyTheme();
+  constructor() {
+    this.billingSubscription = this.permissionService.activeCompanyId$
+      .pipe(
+        filter((companyId): companyId is string => Boolean(companyId)),
+        distinctUntilChanged(),
+      )
+      .subscribe(() => {
+        this.recurringBillingService.runCatchUpBilling().catch((error) => {
+          console.error('Recurring cost auto-billing failed', error);
+        });
+      });
   }
 
   ngOnDestroy(): void {
     this.clearTimer(this.toastTimer);
     this.clearTimer(this.syncTimer);
+    this.billingSubscription.unsubscribe();
+  }
+
+  get isDarkMode(): boolean {
+    return this.themeService.isDark();
   }
 
   toggleTheme(): void {
-    this.isDarkMode = !this.isDarkMode;
-    this.applyTheme();
-    this.showToast(`${this.isDarkMode ? 'Dark' : 'Light'} mode enabled`);
+    const mode = this.themeService.toggle();
+    this.showToast(`${mode === 'dark' ? 'Dark' : 'Light'} mode enabled`);
+  }
+
+  private resolvePageTitle(): string {
+    const url = this.router.url.split('?')[0].split('#')[0];
+    const match = navigationItems
+      .filter((item) => url === item.route || url.startsWith(`${item.route}/`))
+      .sort((a, b) => b.route.length - a.route.length)[0];
+
+    return match?.label ?? 'Dashboard';
   }
 
   visibleNavigationItems(): NavigationItem[] {
@@ -307,15 +333,6 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   clearGlobalSearch(): void {
     this.globalSearch = '';
-  }
-
-  private applyTheme(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    this.document.documentElement.classList.toggle('dark', this.isDarkMode);
-    localStorage.setItem('expense-tracker-theme', this.isDarkMode ? 'dark' : 'light');
   }
 
   private canAccessNavigationItem(item: NavigationItem): boolean {

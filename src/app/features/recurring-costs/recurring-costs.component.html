@@ -9,3 +9,37 @@
   (deleteRecord)="delete($event)"
   (secondaryAction)="acknowledgeRealtime()"
 />
+
+<section class="animate-rise-in px-3 pb-24 sm:px-5 lg:px-7 lg:pb-10">
+  <div class="ui-panel rounded-lg p-5">
+    <div>
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Auto-billing</p>
+      <h2 class="mt-1 text-xl font-semibold">Recent auto-debits</h2>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Cuts made automatically from funding whenever a recurring cost's billing date passes.
+      </p>
+    </div>
+
+    @if (recentCharges.length) {
+      <ul class="mt-4 divide-y divide-slate-200 dark:divide-slate-800">
+        @for (charge of recentCharges; track charge.id) {
+          <li class="flex items-center justify-between gap-3 py-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium">{{ charge.name }}</p>
+              <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                {{ charge.category }} - {{ chargeDate(charge.billedDate) }} - {{ chargeFundingLabel(charge) }}
+              </p>
+            </div>
+            <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1" [class]="paidBadgeClass()">
+              {{ chargeAmount(charge) }}
+            </span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+        No auto-debits yet. They will appear here once a recurring cost's billing date passes.
+      </p>
+    }
+  </div>
+</section>

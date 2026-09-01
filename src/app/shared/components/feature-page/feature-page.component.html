@@ -1,8 +1,8 @@
 <main class="feature-page px-3 pb-24 pt-4 sm:px-5 lg:px-7 lg:pb-10">
-  <section class="ui-shell rounded-lg p-5">
+  <section class="ui-shell animate-rise-in rounded-lg p-5">
     <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
       <div class="max-w-2xl">
-        <div class="flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
+        <div class="flex items-center gap-2 text-sm font-medium text-violet-700 dark:text-violet-300">
           <svg [lucideIcon]="feature.icon" class="size-4"></svg>
           {{ feature.eyebrow }}
         </div>
@@ -39,7 +39,7 @@
     </div>
   </section>
 
-  <section class="mt-4 grid gap-3 md:grid-cols-3" aria-label="Feature metrics">
+  <section class="mt-4 grid gap-3 stagger md:grid-cols-3" aria-label="Feature metrics">
     @for (stat of feature.stats; track stat.label) {
       <article class="ui-card rounded-lg p-4">
         <div class="flex items-start justify-between gap-3">
@@ -94,9 +94,9 @@
         }
       </div>
     } @else if (hasRows) {
-      <div class="mt-5 grid gap-3">
+      <div class="mt-5 grid gap-3 stagger">
       @for (row of rows; track row.id ?? row.title) {
-        <div class="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-slate-700">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-slate-700">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div class="min-w-0">
               <p class="font-semibold">{{ row.title }}</p>
@@ -159,11 +159,11 @@
 
 @if (isModalOpen) {
   <div
-    class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:items-center"
+    class="animate-fade-in fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:items-center"
     (click)="onBackdropClick($event)"
   >
     <section
-      class="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950"
+      class="animate-rise-in w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950"
       role="dialog"
       aria-modal="true"
       aria-labelledby="feature-modal-title"
@@ -228,7 +228,7 @@
                   <select
                     [id]="field.name"
                     [formControlName]="field.name"
-                    class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900"
+                    class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900"
                   >
                     @for (option of field.options ?? []; track option) {
                       <option [value]="optionValue(option)">{{ optionLabel(option) }}</option>
@@ -240,12 +240,12 @@
                   [id]="field.name"
                   [formControlName]="field.name"
                   [rows]="field.rows ?? 3"
-                  class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900"
+                  class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900"
                   [placeholder]="field.placeholder ?? ''"
                 ></textarea>
               } @else if (field.type === 'checkbox') {
                 <span class="flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-                  <input [id]="field.name" [formControlName]="field.name" type="checkbox" class="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                  <input [id]="field.name" [formControlName]="field.name" type="checkbox" class="size-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
                   <span class="text-slate-600 dark:text-slate-300">{{ field.placeholder ?? 'Enabled' }}</span>
                 </span>
               } @else {
@@ -253,14 +253,15 @@
                   [id]="field.name"
                   [formControlName]="field.name"
                   [type]="field.type"
+                  [attr.min]="field.type === 'number' ? 0 : null"
                   [readOnly]="field.readonly ?? false"
-                  class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition read-only:bg-slate-50 read-only:text-slate-500 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900 dark:read-only:bg-slate-950 dark:read-only:text-slate-400"
+                  class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition read-only:bg-slate-50 read-only:text-slate-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900 dark:read-only:bg-slate-950 dark:read-only:text-slate-400"
                   [placeholder]="field.placeholder ?? ''"
                 >
               }
 
               @if (isInvalid(field)) {
-                <span class="text-xs font-medium text-rose-600 dark:text-rose-300">{{ field.label }} is required.</span>
+                <span class="text-xs font-medium text-rose-600 dark:text-rose-300">{{ fieldErrorMessage(field) }}</span>
               }
             </div>
           }
@@ -308,7 +309,7 @@
 @if (toastMessage) {
   <div class="fixed bottom-20 left-1/2 z-50 w-[min(92vw,28rem)] -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 lg:bottom-6">
     <div class="flex items-center gap-3">
-      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-200 dark:ring-teal-400/20">
+      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 ring-1 ring-violet-100 dark:bg-violet-400/10 dark:text-violet-200 dark:ring-violet-400/20">
         <svg lucideIcon="check-circle-2" class="size-4"></svg>
       </span>
       <span>{{ toastMessage }}</span>

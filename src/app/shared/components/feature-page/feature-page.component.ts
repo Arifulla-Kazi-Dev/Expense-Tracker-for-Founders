@@ -137,6 +137,16 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     return Boolean(control?.invalid && control.touched);
   }
 
+  fieldErrorMessage(field: FeatureFormField): string {
+    const control = this.form.controls[field.name];
+
+    if (control?.errors?.['min']) {
+      return `${field.label} cannot be negative.`;
+    }
+
+    return `${field.label} is required.`;
+  }
+
   isRequired(field: FeatureFormField): boolean {
     return Boolean(field.required || this.matchesRequiredWhen(field));
   }
@@ -167,7 +177,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
 
   optionClass(field: FeatureFormField, option: string | FeatureFormOption): string {
     if (this.isSelectedOption(field, option)) {
-      return 'border-teal-300 bg-teal-50 text-teal-950 ring-2 ring-teal-500/20 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-100';
+      return 'border-violet-300 bg-violet-50 text-violet-950 ring-2 ring-violet-500/20 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100';
     }
 
     return 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800';
@@ -311,12 +321,17 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     this.fields.forEach((field) => {
       controls[field.name] = new FormControl<FeatureFormValue>(this.defaultValue(field), {
         nonNullable: true,
-        validators: field.required ? [Validators.required] : [],
+        validators: this.fieldValidators(field, Boolean(field.required)),
       });
     });
 
     this.form = new FormGroup(controls);
     this.setupFormBehaviors();
+  }
+
+  private fieldValidators(field: FeatureFormField, required: boolean) {
+    const validators = required ? [Validators.required] : [];
+    return field.type === 'number' ? [...validators, Validators.min(0)] : validators;
   }
 
   private createFieldSignature(): string {
@@ -419,7 +434,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
         return;
       }
 
-      control.setValidators(this.isRequired(field) ? [Validators.required] : []);
+      control.setValidators(this.fieldValidators(field, this.isRequired(field)));
       control.updateValueAndValidity({ emitEvent: false });
     });
   }

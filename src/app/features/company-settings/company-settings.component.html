@@ -2,7 +2,7 @@
   <section class="ui-shell rounded-lg p-5">
     <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
       <div class="max-w-2xl">
-        <div class="flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
+        <div class="flex items-center gap-2 text-sm font-medium text-violet-700 dark:text-violet-300">
           <svg lucideIcon="building-2" class="size-4"></svg>
           Company settings
         </div>
@@ -38,7 +38,7 @@
       <form class="grid gap-4" [formGroup]="form" (ngSubmit)="save()">
         <label class="grid gap-2 text-sm font-medium">
           Company name
-          <input formControlName="companyName" type="text" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900">
+          <input formControlName="companyName" type="text" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900">
         </label>
 
         @if (!canManageCompany()) {

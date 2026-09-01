@@ -13,7 +13,7 @@ export function tonePanelClass(tone: Tone): string {
     case 'slate':
       return 'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-700/50 dark:text-slate-200 dark:ring-slate-600';
     default:
-      return 'bg-teal-50 text-teal-700 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-200 dark:ring-teal-400/20';
+      return 'bg-violet-50 text-violet-700 ring-violet-100 dark:bg-violet-400/10 dark:text-violet-200 dark:ring-violet-400/20';
   }
 }
 
@@ -30,7 +30,7 @@ export function progressClass(tone: Tone): string {
     case 'slate':
       return 'bg-slate-500 dark:bg-slate-300';
     default:
-      return 'bg-teal-500 dark:bg-teal-300';
+      return 'bg-violet-500 dark:bg-violet-300';
   }
 }
 
@@ -47,7 +47,7 @@ export function softTextClass(tone: Tone): string {
     case 'slate':
       return 'text-slate-600 dark:text-slate-300';
     default:
-      return 'text-teal-600 dark:text-teal-300';
+      return 'text-violet-600 dark:text-violet-300';
   }
 }
 
@@ -88,7 +88,7 @@ export function directionClass(direction: Direction): string {
   }
 
   if (direction === 'up') {
-    return 'text-teal-600 dark:text-teal-300';
+    return 'text-violet-600 dark:text-violet-300';
   }
 
   return 'text-slate-500 dark:text-slate-300';

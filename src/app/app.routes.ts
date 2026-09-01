@@ -17,12 +17,6 @@ export const routes: Routes = [
       import('./features/auth/register.component').then((m) => m.RegisterComponent),
   },
   {
-    path: 'forgot-password',
-    canActivate: [publicOnlyGuard],
-    loadComponent: () =>
-      import('./features/auth/forgot-password.component').then((m) => m.ForgotPasswordComponent),
-  },
-  {
     path: '',
     component: AppShellComponent,
     canActivate: [authGuard],
@@ -32,6 +26,11 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'follow-up',
+        loadComponent: () =>
+          import('./features/follow-up/follow-up.component').then((m) => m.FollowUpComponent),
       },
       {
         path: 'funding',

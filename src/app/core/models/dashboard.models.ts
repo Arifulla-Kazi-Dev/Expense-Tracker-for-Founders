@@ -39,6 +39,7 @@ export interface CategorySpend {
 }
 
 export interface LedgerPayment {
+  id: string;
   title: string;
   owner: string;
   category: string;

@@ -2,7 +2,7 @@
   <section class="ui-shell rounded-lg p-5">
     <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div class="max-w-3xl">
-        <div class="flex items-center gap-2 text-sm font-medium text-teal-700 dark:text-teal-300">
+        <div class="flex items-center gap-2 text-sm font-medium text-violet-700 dark:text-violet-300">
           <svg lucideIcon="users" class="size-4"></svg>
           Team workspace
         </div>
@@ -50,7 +50,7 @@
         </div>
         <div class="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
           <span class="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-            <svg lucideIcon="shield-check" class="size-4 text-teal-600 dark:text-teal-300"></svg>
+            <svg lucideIcon="shield-check" class="size-4 text-violet-600 dark:text-violet-300"></svg>
             How this works
           </span>
           <span>1. Invite with a role preset.</span>
@@ -70,7 +70,7 @@
                 <p class="text-sm font-semibold">{{ roleLabel(role) }}</p>
                 <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ permissionDescription(role) }}</p>
               </div>
-              <span class="rounded-full bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-200 dark:ring-teal-400/20">
+              <span class="rounded-full bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-100 dark:bg-violet-400/10 dark:text-violet-200 dark:ring-violet-400/20">
                 {{ permissionSummary(role).length }}
               </span>
             </div>
@@ -103,7 +103,7 @@
           <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Invite members</p>
           <h3 class="mt-1 text-xl font-semibold">Generate invite link</h3>
         </div>
-        <div class="rounded-lg bg-teal-50 p-2 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-200 dark:ring-teal-400/20">
+        <div class="rounded-lg bg-violet-50 p-2 text-violet-700 ring-1 ring-violet-100 dark:bg-violet-400/10 dark:text-violet-200 dark:ring-violet-400/20">
           <svg lucideIcon="mail" class="size-5"></svg>
         </div>
       </div>
@@ -128,7 +128,7 @@
                       <div class="flex items-center justify-between gap-3">
                         <p class="text-sm font-semibold">{{ roleLabel(role) }}</p>
                         @if (isInviteRoleSelected(role)) {
-                          <svg lucideIcon="check-circle-2" class="size-4 text-teal-600 dark:text-teal-300"></svg>
+                          <svg lucideIcon="check-circle-2" class="size-4 text-violet-600 dark:text-violet-300"></svg>
                         }
                       </div>
                       <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ permissionDescription(role) }}</p>
@@ -148,7 +148,7 @@
 
           <label class="grid gap-2 text-sm font-medium">
             Expiry days
-            <input formControlName="expiryDays" type="number" min="1" max="30" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900">
+            <input formControlName="expiryDays" type="number" min="1" max="30" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900">
           </label>
 
           <button type="submit" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200" [disabled]="isBusy">
@@ -229,7 +229,7 @@
                 (click)="toggleMemberPanel(member)"
               >
                 <span class="flex min-w-0 items-center gap-3">
-                  <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">
+                  <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-violet-600 text-sm font-semibold text-white">
                     {{ member.name.slice(0, 1).toUpperCase() || 'M' }}
                   </span>
                   <span class="min-w-0">
@@ -298,7 +298,7 @@
                                   <span class="mt-0.5 block truncate text-xs opacity-70">{{ permissionDescription(role) }}</span>
                                 </span>
                                 @if (role === member.role) {
-                                  <svg lucideIcon="check-circle-2" class="size-4 shrink-0 text-teal-600 dark:text-teal-300"></svg>
+                                  <svg lucideIcon="check-circle-2" class="size-4 shrink-0 text-violet-600 dark:text-violet-300"></svg>
                                 }
                               </button>
                             }
@@ -347,8 +347,8 @@
                         <span class="size-2 rounded-full bg-slate-400"></span>
                         Default
                       </span>
-                      <span class="inline-flex h-8 items-center gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 text-xs font-semibold text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-100">
-                        <span class="size-2 rounded-full bg-teal-500"></span>
+                      <span class="inline-flex h-8 items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100">
+                        <span class="size-2 rounded-full bg-violet-500"></span>
                         Custom
                       </span>
                       @if (canEditMemberPermissions(member) && hasPermissionOverrides(member)) {
@@ -388,7 +388,7 @@
                               <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
                                   <p class="text-sm font-semibold">{{ permissionItem(permission).label }}</p>
-                                  <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ring-1" [ngClass]="isPermissionOverride(member, permission) ? 'bg-teal-50 text-teal-700 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-100 dark:ring-teal-400/20' : 'bg-white text-slate-500 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-800'">
+                                  <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ring-1" [ngClass]="isPermissionOverride(member, permission) ? 'bg-violet-50 text-violet-700 ring-violet-100 dark:bg-violet-400/10 dark:text-violet-100 dark:ring-violet-400/20' : 'bg-white text-slate-500 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-800'">
                                     {{ isPermissionOverride(member, permission) ? 'Custom' : 'Default' }}
                                   </span>
                                 </div>

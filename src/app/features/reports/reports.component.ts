@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LucideDynamicIcon } from '@lucide/angular';
@@ -10,12 +10,15 @@ import { LedgerExportFormat, LedgerExportService } from '../../core/services/led
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { progressClass, softTextClass, tonePanelClass } from '../../core/utils/ui-classnames';
 import { CategorySpend, SpendSource, Tone } from '../../core/models/dashboard.models';
+import { ChartDatum } from '../../shared/components/charts/chart-theme';
+import { FinanceBarComponent } from '../../shared/components/charts/finance-bar.component';
+import { FinanceDonutComponent } from '../../shared/components/charts/finance-donut.component';
 import { SpendTrendChartComponent } from '../../shared/components/spend-trend-chart/spend-trend-chart.component';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, LucideDynamicIcon, SpendTrendChartComponent],
+  imports: [CommonModule, LucideDynamicIcon, SpendTrendChartComponent, FinanceBarComponent, FinanceDonutComponent],
   templateUrl: './reports.component.html',
 })
 export class ReportsComponent implements OnDestroy {
@@ -63,6 +66,36 @@ export class ReportsComponent implements OnDestroy {
     return this.summary().categorySpends[0] ?? null;
   }
 
+  // computed(), not plain methods: these feed Chart.js components via a signal
+  // input(), which compares by reference. A method called fresh from the template
+  // on every change-detection check would build a new array each time even when
+  // nothing changed, making the chart destroy/recreate itself constantly instead
+  // of painting. computed() only recomputes when summary() actually changes.
+  readonly capitalSplitChartData = computed<ChartDatum[]>(() => {
+    const summary = this.summary();
+    return [
+      { name: 'Paid spend', value: summary.totalPaid, tone: 'teal' },
+      { name: 'Pending', value: summary.totalPending, tone: 'amber' },
+      { name: 'Available cash', value: summary.remainingBalance, tone: 'emerald' },
+    ].filter((datum) => datum.value > 0) as ChartDatum[];
+  });
+
+  readonly categoryChartData = computed<ChartDatum[]>(() =>
+    this.summary().categorySpends.map((category) => ({
+      name: category.label,
+      value: category.amount,
+      tone: category.tone,
+    })),
+  );
+
+  readonly spendSourceChartData = computed<ChartDatum[]>(() =>
+    this.summary().spendSources.map((source) => ({
+      name: source.label,
+      value: source.amount,
+      tone: source.tone,
+    })),
+  );
+
   topCategoryShare(): number {
     const topCategory = this.topCategory();
     const totalExpenses = this.summary().totalExpenses;
@@ -82,16 +115,6 @@ export class ReportsComponent implements OnDestroy {
   categoryShare(category: CategorySpend): number {
     const totalExpenses = this.summary().totalExpenses;
     return totalExpenses > 0 ? Math.round((category.amount / totalExpenses) * 100) : 0;
-  }
-
-  availableCashShare(): number {
-    const totalFunding = this.summary().totalFunding;
-    return totalFunding > 0 ? Math.max(100 - this.summary().utilizationPercentage, 0) : 0;
-  }
-
-  allocationGradient(): string {
-    const used = this.summary().utilizationPercentage;
-    return `conic-gradient(#2dd4bf 0 ${used}%, #1e293b ${used}% 100%)`;
   }
 
   reportFinding(): string {

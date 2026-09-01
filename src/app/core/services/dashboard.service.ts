@@ -17,6 +17,7 @@ import {
 import { Expense, PaymentStatus } from '../models/expense.model';
 import { FounderNote } from '../models/founder-note.model';
 import { Funding } from '../models/funding.model';
+import { RecurringCostCharge } from '../models/recurring-cost-charge.model';
 import { RecurringCost } from '../models/recurring-cost.model';
 import { StartupCost } from '../models/startup-cost.model';
 import { TeamPayment } from '../models/team-payment.model';
@@ -25,9 +26,12 @@ import { fundingTypeIcon, fundingTypeTone } from '../utils/funding-source-option
 import { ExpenseService } from './expense.service';
 import { FounderNoteService } from './founder-note.service';
 import { FundingService } from './funding.service';
+import { RecurringCostChargeService } from './recurring-cost-charge.service';
 import { RecurringCostService } from './recurring-cost.service';
 import { StartupCostService } from './startup-cost.service';
 import { TeamPaymentService } from './team-payment.service';
+
+const MAX_TREND_MONTHS = 120;
 
 export const emptyDashboardSummary: DashboardSummary = {
   totalFunding: 0,
@@ -68,6 +72,7 @@ export class DashboardService {
   private readonly teamPaymentService = inject(TeamPaymentService);
   private readonly startupCostService = inject(StartupCostService);
   private readonly recurringCostService = inject(RecurringCostService);
+  private readonly recurringCostChargeService = inject(RecurringCostChargeService);
   private readonly founderNoteService = inject(FounderNoteService);
 
   readonly summary$ = combineLatest([
@@ -76,10 +81,11 @@ export class DashboardService {
     this.teamPaymentService.list(),
     this.startupCostService.list(),
     this.recurringCostService.list(),
+    this.recurringCostChargeService.list(),
     this.founderNoteService.list(),
   ]).pipe(
-    map(([funding, expenses, teamPayments, startupCosts, recurringCosts, notes]) =>
-      this.buildSummary(funding, expenses, teamPayments, startupCosts, recurringCosts, notes),
+    map(([funding, expenses, teamPayments, startupCosts, recurringCosts, recurringCostCharges, notes]) =>
+      this.buildSummary(funding, expenses, teamPayments, startupCosts, recurringCosts, recurringCostCharges, notes),
     ),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
@@ -90,6 +96,7 @@ export class DashboardService {
     teamPayments: TeamPayment[],
     startupCosts: StartupCost[],
     recurringCosts: RecurringCost[],
+    recurringCostCharges: RecurringCostCharge[],
     notes: FounderNote[],
   ): DashboardSummary {
     const totalFunding = sum(funding.map((item) => item.amount));
@@ -101,7 +108,8 @@ export class DashboardService {
     const paidExpense = sumPaid(expenses);
     const paidTeam = sum(teamPayments.map((item) => paidAmount(item.paymentStatus, item.monthlyAmount, item.paidAmount)));
     const paidStartup = sum(startupCosts.map((item) => paidAmount(item.paymentStatus, item.amount, item.paidAmount)));
-    const totalPaid = paidExpense + paidTeam + paidStartup;
+    const totalRecurringCharged = sum(recurringCostCharges.map((item) => item.amount));
+    const totalPaid = paidExpense + paidTeam + paidStartup + totalRecurringCharged;
     const pendingExpense = sumPending(expenses);
     const pendingTeam = sum(teamPayments.map((item) => pendingAmount(item.paymentStatus, item.monthlyAmount, item.pendingAmount)));
     const pendingStartup = sum(startupCosts.map((item) => pendingAmount(item.paymentStatus, item.amount, item.pendingAmount)));
@@ -135,13 +143,13 @@ export class DashboardService {
     ].filter((status) => status !== 'Paid').length;
     const upcomingExpenses = this.upcomingExpenseEntries(expenses, startupCosts, recurringCosts);
     const upcomingExpensesAmount = sum(upcomingExpenses.map((item) => item.amount));
-    const hasData = funding.length + expenses.length + teamPayments.length + startupCosts.length + recurringCosts.length + notes.length > 0;
+    const hasData = funding.length + expenses.length + teamPayments.length + startupCosts.length + recurringCosts.length + recurringCostCharges.length + notes.length > 0;
     const categorySpends = this.categorySpends(expenses, startupCosts, recurringCosts);
     const insightBars = this.insightBars(categorySpends, totalExpenses);
-    const allLedgerPayments = this.ledgerPayments(expenses, teamPayments, startupCosts, recurringCosts);
+    const allLedgerPayments = this.ledgerPayments(expenses, teamPayments, startupCosts, recurringCostCharges);
     const decisionNotes = this.decisionNotes(notes);
     const burnTrend = this.normalizedTrend(monthlySpendTrend);
-    const fundingUtilization = this.fundingUtilization(funding, expenses, teamPayments, startupCosts, recurringCosts);
+    const fundingUtilization = this.fundingUtilization(funding, expenses, teamPayments, startupCosts, recurringCostCharges);
 
     return {
       totalFunding,
@@ -346,10 +354,11 @@ export class DashboardService {
     expenses: Expense[],
     teamPayments: TeamPayment[],
     startupCosts: StartupCost[],
-    recurringCosts: RecurringCost[],
+    recurringCostCharges: RecurringCostCharge[],
   ): LedgerPayment[] {
     return [
       ...expenses.map((item) => ({
+        id: `expense-${item.id}`,
         title: item.title,
         owner: item.category,
         category: item.expenseType,
@@ -358,6 +367,7 @@ export class DashboardService {
         due: compactDate(item.dueDate || item.date),
       })),
       ...teamPayments.map((item) => ({
+        id: `team-payment-${item.id}`,
         title: `${item.personName} payment`,
         owner: item.role,
         category: item.type,
@@ -366,6 +376,7 @@ export class DashboardService {
         due: compactDate(item.paymentDate),
       })),
       ...startupCosts.map((item) => ({
+        id: `startup-cost-${item.id}`,
         title: item.costName,
         owner: 'Startup setup',
         category: 'One-Time',
@@ -373,13 +384,14 @@ export class DashboardService {
         amount: item.amount,
         due: compactDate(item.date),
       })),
-      ...recurringCosts.map((item) => ({
-        title: item.name,
+      ...recurringCostCharges.map((item) => ({
+        id: `recurring-charge-${item.id}`,
+        title: `${item.name} (auto-debit)`,
         owner: item.category,
         category: item.billingCycle,
-        status: item.isActive ? 'Pending' as PaymentStatus : 'Paid' as PaymentStatus,
+        status: 'Paid' as PaymentStatus,
         amount: item.amount,
-        due: compactDate(item.nextBillingDate),
+        due: compactDate(item.billedDate),
       })),
     ];
   }
@@ -427,10 +439,13 @@ export class DashboardService {
     }
 
     const sortedDates = datedEntries.sort((a, b) => a.getTime() - b.getTime());
-    const start = sortedDates[0];
     const end = sortedDates[sortedDates.length - 1];
+    const earliestStart = sortedDates[0];
+    const clampedStart = monthsBetween(earliestStart, end) > MAX_TREND_MONTHS
+      ? new Date(end.getFullYear(), end.getMonth() - MAX_TREND_MONTHS, 1)
+      : earliestStart;
     const points: MonthlyTrendPoint[] = [];
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const cursor = new Date(clampedStart.getFullYear(), clampedStart.getMonth(), 1);
 
     while (cursor <= end) {
       points.push(trendPoint(cursor, monthlyTotals.get(monthKey(cursor)) ?? 0));
@@ -485,7 +500,7 @@ export class DashboardService {
     expenses: Expense[],
     teamPayments: TeamPayment[],
     startupCosts: StartupCost[],
-    recurringCosts: RecurringCost[],
+    recurringCostCharges: RecurringCostCharge[],
   ): FundingUtilization[] {
     const utilizedBySource = new Map<string, number>();
     const addUtilized = (sourceId: string | undefined, amount: number): void => {
@@ -499,9 +514,7 @@ export class DashboardService {
     expenses.forEach((item) => addUtilized(item.fundingSourceId, paidAmount(item.paymentStatus, item.amount, item.paidAmount)));
     teamPayments.forEach((item) => addUtilized(item.fundingSourceId, paidAmount(item.paymentStatus, item.monthlyAmount, item.paidAmount)));
     startupCosts.forEach((item) => addUtilized(item.fundingSourceId, paidAmount(item.paymentStatus, item.amount, item.paidAmount)));
-    recurringCosts
-      .filter((item) => item.isActive)
-      .forEach((item) => addUtilized(item.fundingSourceId, monthlyEquivalent(item.amount, item.billingCycle)));
+    recurringCostCharges.forEach((item) => addUtilized(item.fundingSourceId, item.amount));
 
     return funding
       .map((source) => {
@@ -641,6 +654,10 @@ function startOfDay(date: Date): Date {
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function monthsBetween(start: Date, end: Date): number {
+  return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
 }
 
 function monthKey(date: Date): string {

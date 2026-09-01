@@ -1,34 +1,28 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Component, DestroyRef, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { AuthService, isMissingWorkspaceProfileError } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 const RETURNING_USER_STORAGE_KEY = 'startup-expense-os-auth-seen';
-const SIGNIN_INTENT = 'signin';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [LucideDynamicIcon, ReactiveFormsModule, RouterLink],
+  imports: [LucideDynamicIcon, RouterLink],
   templateUrl: './login.component.html',
 })
 export class LoginComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly formBuilder = inject(FormBuilder);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly themeService = inject(ThemeService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
-
-  readonly form = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required]],
-  });
 
   errorMessage = '';
   inviteToken = '';
@@ -38,7 +32,6 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.inviteToken = this.readInviteToken();
-    this.prefillEmailFromQuery();
 
     this.authService.user$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -47,47 +40,18 @@ export class LoginComponent implements OnInit {
           void this.redirectAuthenticatedUser();
         }
       });
-
-    if (this.shouldSendFirstVisitToRegister()) {
-      void this.router.navigate(['/register'], { replaceUrl: true });
-    }
   }
 
   get isInviteFlow(): boolean {
     return Boolean(this.inviteToken);
   }
 
-  async login(): Promise<void> {
-    if (this.form.invalid || this.isSubmitting) {
-      this.form.markAllAsTouched();
-      return;
-    }
+  get isDarkMode(): boolean {
+    return this.themeService.isDark();
+  }
 
-    this.isSubmitting = true;
-    this.errorMessage = '';
-    this.showSignupPrompt = false;
-
-    try {
-      await this.authService.login(this.form.controls.email.value, this.form.controls.password.value, this.currentInviteToken());
-      this.rememberReturningUser();
-      this.clearStoredInvite();
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-    } catch (error) {
-      if (this.authService.currentUser) {
-        await this.redirectAuthenticatedUser();
-        return;
-      }
-
-      if (isMissingWorkspaceProfileError(error)) {
-        await this.redirectToRegister();
-        return;
-      }
-
-      this.showSignupPrompt = shouldOfferSignup(error);
-      this.errorMessage = authErrorMessage(error);
-    } finally {
-      this.isSubmitting = false;
-    }
+  toggleTheme(): void {
+    this.themeService.toggle();
   }
 
   async loginWithGoogle(): Promise<void> {
@@ -123,18 +87,7 @@ export class LoginComponent implements OnInit {
   }
 
   signupQueryParams(): Record<string, string> | null {
-    const email = this.form.controls.email.value.trim();
-    const queryParams: Record<string, string> = {};
-
-    if (this.isInviteFlow) {
-      queryParams['inviteToken'] = this.inviteToken;
-    }
-
-    if (email) {
-      queryParams['email'] = email;
-    }
-
-    return Object.keys(queryParams).length ? queryParams : null;
+    return this.isInviteFlow ? { inviteToken: this.inviteToken } : null;
   }
 
   private readInviteToken(): string {
@@ -155,23 +108,10 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  private prefillEmailFromQuery(): void {
-    const email = this.route.snapshot.queryParamMap.get('email')?.trim();
-
-    if (email) {
-      this.form.controls.email.setValue(email);
-    }
-  }
-
   private async redirectToRegister(): Promise<void> {
     const queryParams: Record<string, string> = {
       reason: 'setup',
     };
-    const email = this.form.controls.email.value.trim();
-
-    if (email) {
-      queryParams['email'] = email;
-    }
 
     if (this.inviteToken) {
       queryParams['inviteToken'] = this.inviteToken;
@@ -198,18 +138,6 @@ export class LoginComponent implements OnInit {
     return this.inviteToken.trim() || null;
   }
 
-  private shouldSendFirstVisitToRegister(): boolean {
-    if (!this.isBrowser || this.inviteToken || this.route.snapshot.queryParamMap.get('intent') === SIGNIN_INTENT) {
-      return false;
-    }
-
-    try {
-      return localStorage.getItem(RETURNING_USER_STORAGE_KEY) !== 'true';
-    } catch {
-      return false;
-    }
-  }
-
   private rememberReturningUser(): void {
     if (!this.isBrowser) {
       return;
@@ -227,30 +155,29 @@ function authErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const normalized = `${(error as { code?: string }).code ?? ''} ${error.message}`.toLowerCase();
 
-    if (normalized.includes('invalid-credential') || normalized.includes('wrong-password')) {
-      return 'Those sign-in details did not match a workspace account. Try again, reset your password, or create a workspace account.';
+    if (normalized.includes('popup-closed') || normalized.includes('popup closed') || normalized.includes('cancelled-popup')) {
+      return 'Google Sign-In was closed before it finished. Try again to continue.';
     }
 
-    if (normalized.includes('user-not-found')) {
-      return 'No workspace account exists for this email yet. Create an account to continue.';
+    if (normalized.includes('popup-blocked')) {
+      return 'Your browser blocked the Google Sign-In popup. Allow popups for this site and try again.';
     }
 
-    if (normalized.includes('popup-closed') || normalized.includes('popup closed')) {
-      return 'Google Sign-In was closed before it finished.';
+    if (normalized.includes('no company workspace profile exists')) {
+      return 'This Google account is not part of a workspace yet. Create one or use an invite link.';
     }
 
     return cleanBackendTerms(error.message);
   }
 
-  return 'Unable to sign in. Please check your credentials and try again.';
+  return 'Unable to sign in with Google. Please try again.';
 }
 
 function shouldOfferSignup(error: unknown): boolean {
   const value = error as { code?: string; message?: string } | undefined;
   const normalized = `${value?.code ?? ''} ${value?.message ?? ''}`.toLowerCase();
 
-  return normalized.includes('invalid-credential')
-    || normalized.includes('user-not-found')
+  return normalized.includes('user-not-found')
     || normalized.includes('no company workspace profile exists');
 }
 

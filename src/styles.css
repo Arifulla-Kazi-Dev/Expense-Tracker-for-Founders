@@ -19,11 +19,8 @@ html.dark {
 body {
   min-width: 320px;
   margin: 0;
-  background:
-    linear-gradient(90deg, rgba(15, 23, 42, 0.026) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.026) 1px, transparent 1px),
-    linear-gradient(180deg, #fbfcfb 0%, #f6f8fb 52%, #eef4f2 100%);
-  background-size: 56px 56px, 56px 56px, auto;
+  background: #f7f7fb;
+  color: #0f1020;
   font-family: "Inter", "Segoe UI", Arial, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -31,11 +28,8 @@ body {
 }
 
 html.dark body {
-  background:
-    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px),
-    linear-gradient(180deg, #020617 0%, #07111f 56%, #07171a 100%);
-  background-size: 56px 56px, 56px 56px, auto;
+  background: #07070d;
+  color: #e9e9f2;
 }
 
 button,
@@ -46,22 +40,127 @@ textarea {
 }
 
 ::selection {
-  background: rgba(20, 184, 166, 0.2);
-  color: #0f172a;
+  background: rgba(124, 58, 237, 0.22);
+  color: #1e1b4b;
 }
 
 html.dark ::selection {
-  color: #f8fafc;
+  background: rgba(167, 139, 250, 0.28);
+  color: #f5f3ff;
+}
+
+/* ---------------------------------------------------------------------------
+   Premium surfaces — flat, crisp, violet-tinted. One subtle wash max.
+--------------------------------------------------------------------------- */
+.ui-shell {
+  background: #ffffff;
+  border: 1px solid rgba(2, 6, 23, 0.07);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(15, 16, 32, 0.04), 0 12px 32px rgba(15, 16, 32, 0.05);
+}
+
+html.dark .ui-shell {
+  background: #0e0e1a;
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.ui-panel {
+  background: #ffffff;
+  border: 1px solid rgba(2, 6, 23, 0.07);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(15, 16, 32, 0.035), 0 8px 24px rgba(15, 16, 32, 0.04);
+}
+
+html.dark .ui-panel {
+  background: #0e0e1a;
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.ui-card {
+  background: #ffffff;
+  border: 1px solid rgba(2, 6, 23, 0.07);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 16, 32, 0.03);
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.ui-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow: 0 1px 2px rgba(15, 16, 32, 0.04), 0 14px 34px rgba(76, 29, 149, 0.1);
+}
+
+html.dark .ui-card {
+  background: #0e0e1a;
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+html.dark .ui-card:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+
+.metric-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.soft-divider {
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.3), transparent);
+  height: 1px;
+}
+
+/* Hero — a single tasteful violet wash, no busy grid */
+.finance-hero {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(124, 58, 237, 0.08) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+    #ffffff;
+  border: 1px solid rgba(2, 6, 23, 0.07);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(15, 16, 32, 0.035), 0 10px 30px rgba(76, 29, 149, 0.06);
+}
+
+html.dark .finance-hero {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(124, 58, 237, 0.16) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+    #0e0e1a;
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+}
+
+/* Ink panel — deep premium violet→ink for highlighted asides */
+.ink-panel {
+  background: linear-gradient(150deg, #2a1d57 0%, #161427 45%, #0c0b16 100%);
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 18px;
+  color: #f5f3ff;
+  box-shadow: 0 16px 44px rgba(46, 16, 101, 0.32);
+}
+
+/* Plain clean surface (was a busy grid) */
+.soft-grid-panel {
+  background: #fbfbfe;
+  border-radius: 14px;
+}
+
+html.dark .soft-grid-panel {
+  background: rgba(148, 163, 184, 0.04);
 }
 
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: #e2e8f0;
+  background: #e9e9f2;
+  border-radius: 8px;
 }
 
 html.dark .skeleton {
-  background: #1e293b;
+  background: #1a1a2b;
 }
 
 .skeleton::after {
@@ -73,108 +172,72 @@ html.dark .skeleton {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
 }
 
+html.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
   }
 }
 
-.ui-shell {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74)),
-    linear-gradient(180deg, rgba(20, 184, 166, 0.08), rgba(245, 158, 11, 0.05));
-  border: 1px solid rgba(203, 213, 225, 0.76);
-  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.06);
+/* ---------------------------------------------------------------------------
+   Motion utilities (respect reduced-motion preferences)
+--------------------------------------------------------------------------- */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-html.dark .ui-shell {
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.82)),
-    linear-gradient(180deg, rgba(45, 212, 191, 0.08), rgba(251, 113, 133, 0.045));
-  border-color: rgba(51, 65, 85, 0.82);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.ui-panel {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(203, 213, 225, 0.76);
-  box-shadow: 0 14px 42px rgba(15, 23, 42, 0.052);
-  backdrop-filter: blur(18px);
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-html.dark .ui-panel {
-  background: rgba(15, 23, 42, 0.78);
-  border-color: rgba(51, 65, 85, 0.9);
-  box-shadow: 0 18px 58px rgba(0, 0, 0, 0.22);
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-.ui-card {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(203, 213, 225, 0.78);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.046);
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
-.ui-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(148, 163, 184, 0.9);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
-}
+.animate-fade-in { animation: fade-in 0.5s ease both; }
+.animate-rise-in { animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-slide-in-right { animation: slide-in-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-pop-in { animation: pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-float-soft { animation: float-soft 6s ease-in-out infinite; }
 
-html.dark .ui-card {
-  background: rgba(15, 23, 42, 0.82);
-  border-color: rgba(51, 65, 85, 0.88);
-  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2);
-}
+.stagger > * { animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger > *:nth-child(6) { animation-delay: 0.34s; }
+.stagger > *:nth-child(7) { animation-delay: 0.40s; }
+.stagger > *:nth-child(8) { animation-delay: 0.46s; }
 
-html.dark .ui-card:hover {
-  border-color: rgba(100, 116, 139, 0.95);
-}
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-rise-in,
+  .animate-slide-in-right,
+  .animate-pop-in,
+  .animate-float-soft,
+  .stagger > * {
+    animation: none !important;
+  }
 
-.metric-number {
-  font-variant-numeric: tabular-nums;
-}
-
-.soft-divider {
-  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.34), transparent);
-  height: 1px;
-}
-
-.finance-hero {
-  background:
-    linear-gradient(120deg, rgba(255, 255, 255, 0.96) 0%, rgba(250, 252, 251, 0.88) 48%, rgba(232, 246, 241, 0.86) 100%),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.08) 0 1px, transparent 1px 100%);
-  background-size: auto, 18px 18px;
-}
-
-html.dark .finance-hero {
-  background:
-    linear-gradient(120deg, rgba(15, 23, 42, 0.92) 0%, rgba(2, 6, 23, 0.88) 54%, rgba(12, 30, 35, 0.88) 100%),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 0 1px, transparent 1px 100%);
-  background-size: auto, 18px 18px;
-}
-
-.ink-panel {
-  background:
-    linear-gradient(180deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.94)),
-    linear-gradient(90deg, rgba(45, 212, 191, 0.08), rgba(245, 158, 11, 0.06));
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  color: #f8fafc;
-  box-shadow: 0 20px 58px rgba(2, 6, 23, 0.28);
-}
-
-.soft-grid-panel {
-  background:
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    rgba(255, 255, 255, 0.84);
-  background-size: 28px 28px, 28px 28px, auto;
-}
-
-html.dark .soft-grid-panel {
-  background:
-    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
-    rgba(2, 6, 23, 0.72);
-  background-size: 28px 28px, 28px 28px, auto;
+  html {
+    scroll-behavior: auto;
+  }
 }

@@ -13,6 +13,7 @@ export interface RecurringCost extends FundingSourceAttribution {
   billingCycle: BillingCycle;
   category: string;
   nextBillingDate: string;
+  lastBilledDate?: string;
   isActive: boolean;
   notes: string;
   createdAt: FirestoreDate;

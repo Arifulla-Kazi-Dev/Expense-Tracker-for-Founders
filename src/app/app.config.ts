@@ -9,7 +9,6 @@ import {
   provideFirestore,
 } from '@angular/fire/firestore';
 import { isPlatformBrowser } from '@angular/common';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 
 import { environment } from '../environments/environment';
@@ -20,7 +19,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideClientHydration(withEventReplay()),
     provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),
     provideAuth(() => getAuth()),
     provideFirestore(() => {

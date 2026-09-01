@@ -2,13 +2,16 @@ import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { BILLING_CYCLES, RecurringCost, RecurringCostInput } from '../../core/models/recurring-cost.model';
+import { RecurringCostCharge } from '../../core/models/recurring-cost-charge.model';
 import { EXPENSE_CATEGORIES } from '../../core/models/expense.model';
 import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { FundingService } from '../../core/services/funding.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { RecurringCostChargeService } from '../../core/services/recurring-cost-charge.service';
 import { RecurringCostService } from '../../core/services/recurring-cost.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
+import { badgeClass } from '../../core/utils/ui-classnames';
 import { booleanValue, numberValue, textValue } from '../../core/utils/feature-form-values';
 import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
 import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
@@ -23,8 +26,10 @@ export class RecurringCostsComponent implements OnDestroy {
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly recurringCostService = inject(RecurringCostService);
+  private readonly recurringCostChargeService = inject(RecurringCostChargeService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly recurringCosts = toSignal(this.recurringCostService.list(), { initialValue: [] as RecurringCost[] });
+  private readonly recurringCostCharges = toSignal(this.recurringCostChargeService.list(), { initialValue: [] as RecurringCostCharge[] });
   private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
@@ -80,6 +85,31 @@ export class RecurringCostsComponent implements OnDestroy {
       amount: currencyINR(item.amount),
       raw: item as unknown as Record<string, unknown>,
     }));
+  }
+
+  get recentCharges(): RecurringCostCharge[] {
+    return [...this.recurringCostCharges()]
+      .sort((a, b) => b.billedDate.localeCompare(a.billedDate))
+      .slice(0, 10);
+  }
+
+  chargeAmount(charge: RecurringCostCharge): string {
+    return currencyINR(charge.amount);
+  }
+
+  chargeDate(billedDate: string): string {
+    const date = new Date(`${billedDate}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? billedDate
+      : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+  }
+
+  chargeFundingLabel(charge: RecurringCostCharge): string {
+    return fundingSourceLabel(charge);
+  }
+
+  paidBadgeClass(): string {
+    return badgeClass('Paid');
   }
 
   async save(event: FeatureSaveEvent): Promise<void> {

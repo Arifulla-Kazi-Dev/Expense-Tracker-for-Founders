@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { EnvironmentInjector, Injectable, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -12,7 +12,7 @@ import {
   updateDoc,
 } from '@angular/fire/firestore';
 import type { DocumentData, UpdateData } from '@angular/fire/firestore';
-import { Observable, catchError, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { PermissionService } from './permission.service';
@@ -22,68 +22,104 @@ export class FirestoreCrudService {
   private readonly firestore = inject(Firestore);
   private readonly authService = inject(AuthService);
   private readonly permissionService = inject(PermissionService);
+  private readonly environmentInjector = inject(EnvironmentInjector);
+
+  /**
+   * One shared realtime stream per collection. The dashboard summary, the shell
+   * and the matching feature page all read the same collections, so without this
+   * cache each subscriber would open its own Firestore listener (duplicate reads).
+   * The inner switchMap on activeCompanyId$ keeps the stream correct across
+   * company switches, while shareReplay({ refCount: true }) tears the listener
+   * down once nothing is subscribed.
+   */
+  private readonly listCache = new Map<string, Observable<unknown[]>>();
 
   list<T>(collectionName: string): Observable<T[]> {
-    return this.permissionService.activeCompanyId$.pipe(
+    const cached = this.listCache.get(collectionName);
+
+    if (cached) {
+      return cached as Observable<T[]>;
+    }
+
+    const stream = this.permissionService.activeCompanyId$.pipe(
       switchMap((companyId) => {
         if (!companyId) {
           return of([] as T[]);
         }
 
-        const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
-        const scopedQuery = query(scopedCollection, orderBy('createdAt', 'desc'));
-        return collectionSnapshots(scopedQuery).pipe(
-          map((snapshots) =>
-            snapshots
-              .filter((snapshot) => !snapshot.metadata.hasPendingWrites)
-              .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
-          ),
-          catchError((error) => {
-            console.error('Cloud list failed', error);
-            return of([] as T[]);
-          }),
-        );
+        return this.runInFirebaseContext(() => {
+          const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
+          const scopedQuery = query(scopedCollection, orderBy('createdAt', 'desc'));
+          return collectionSnapshots(scopedQuery).pipe(
+            map((snapshots) =>
+              snapshots
+                .filter((snapshot) => !snapshot.metadata.hasPendingWrites)
+                .map((snapshot) => ({ ...snapshot.data(), id: snapshot.id }) as T),
+            ),
+            catchError((error) => {
+              console.error('Cloud list failed', error);
+              return of([] as T[]);
+            }),
+          );
+        });
       }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
+
+    this.listCache.set(collectionName, stream as Observable<unknown[]>);
+    return stream;
   }
 
   async create<T extends object>(collectionName: string, data: T): Promise<string> {
     const uid = this.requireUid();
     const companyId = this.requireCompanyId();
-    const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
-    const recordRef = doc(scopedCollection);
 
-    await withTimeout(
-      setDoc(recordRef, this.withMetadata(data, uid, companyId, recordRef.id)),
-      'Create record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
-    );
+    return this.runInFirebaseContext(async () => {
+      const scopedCollection = collection(this.firestore, `companies/${companyId}/${collectionName}`);
+      const recordRef = doc(scopedCollection);
 
-    return recordRef.id;
+      await withTimeout(
+        setDoc(recordRef, this.withMetadata(data, uid, companyId, recordRef.id)),
+        'Create record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
+      );
+
+      return recordRef.id;
+    });
   }
 
   async update<T extends object>(collectionName: string, id: string, data: Partial<T>): Promise<void> {
     this.requireUid();
     const companyId = this.requireCompanyId();
-    const recordRef = doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`);
 
-    const updateData = this.sanitize({
-      ...data,
-      updatedAt: serverTimestamp(),
-    }) as UpdateData<DocumentData>;
+    return this.runInFirebaseContext(async () => {
+      const recordRef = doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`);
 
-    await withTimeout(
-      updateDoc(recordRef, updateData),
-      'Update record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
-    );
+      const updateData = this.sanitize({
+        ...data,
+        updatedAt: serverTimestamp(),
+      }) as UpdateData<DocumentData>;
+
+      await withTimeout(
+        updateDoc(recordRef, updateData),
+        'Update record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
+      );
+    });
   }
 
   async delete(collectionName: string, id: string): Promise<void> {
     this.requireUid();
     const companyId = this.requireCompanyId();
-    await withTimeout(
-      deleteDoc(doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`)),
-      'Delete record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
-    );
+
+    return this.runInFirebaseContext(async () => {
+      await withTimeout(
+        deleteDoc(doc(this.firestore, `companies/${companyId}/${collectionName}/${id}`)),
+        'Delete record timed out. Check that the Cloud database is enabled and access rules allow company writes.',
+      );
+    });
+  }
+
+  private runInFirebaseContext<T>(operation: () => T): T {
+    return runInInjectionContext(this.environmentInjector, operation);
   }
 
   private withMetadata<T extends object>(data: T, uid: string, companyId: string, id: string): Record<string, unknown> {

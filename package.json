@@ -26,6 +26,7 @@
     "@angular/ssr": "^19.0.4",
     "@lucide/angular": "^1.17.0",
     "@tailwindcss/postcss": "^4.3.0",
+    "chart.js": "^4.5.1",
     "express": "^4.18.2",
     "firebase": "^11.10.0",
     "postcss": "^8.5.15",

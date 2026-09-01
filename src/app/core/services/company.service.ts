@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { EnvironmentInjector, Injectable, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, doc, docData, serverTimestamp, setDoc } from '@angular/fire/firestore';
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 
@@ -11,6 +11,7 @@ export class CompanyService {
   private readonly firestore = inject(Firestore);
   private readonly authService = inject(AuthService);
   private readonly permissionService = inject(PermissionService);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   readonly activeCompanyId$ = this.permissionService.activeCompanyId$;
 
@@ -20,11 +21,13 @@ export class CompanyService {
         return of(null);
       }
 
-      return (docData(doc(this.firestore, `companies/${companyId}`), { idField: 'companyId' }) as Observable<Company>).pipe(
-        catchError((error) => {
-          console.error('Company load failed', error);
-          return of(null);
-        }),
+      return runInInjectionContext(this.environmentInjector, () =>
+        (docData(doc(this.firestore, `companies/${companyId}`), { idField: 'companyId' }) as Observable<Company>).pipe(
+          catchError((error) => {
+            console.error('Company load failed', error);
+            return of(null);
+          }),
+        ),
       );
     }),
     shareReplay({ bufferSize: 1, refCount: true }),

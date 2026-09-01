@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { EnvironmentInjector, Injectable, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -21,6 +21,7 @@ export class MemberService {
   private readonly firestore = inject(Firestore);
   private readonly companyService = inject(CompanyService);
   private readonly permissionService = inject(PermissionService);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   readonly members$: Observable<CompanyMember[]> = this.companyService.activeCompanyId$.pipe(
     switchMap((companyId) => {
@@ -28,14 +29,16 @@ export class MemberService {
         return of([]);
       }
 
-      const membersRef = collection(this.firestore, `companies/${companyId}/members`);
-      return collectionSnapshots(query(membersRef, orderBy('createdAt', 'asc'))).pipe(
-        map((snapshots) => snapshots.map((snapshot) => normalizeMember(snapshot.id, snapshot.data()))),
-        catchError((error) => {
-          console.error('Members load failed', error);
-          return of([]);
-        }),
-      );
+      return runInInjectionContext(this.environmentInjector, () => {
+        const membersRef = collection(this.firestore, `companies/${companyId}/members`);
+        return collectionSnapshots(query(membersRef, orderBy('createdAt', 'asc'))).pipe(
+          map((snapshots) => snapshots.map((snapshot) => normalizeMember(snapshot.id, snapshot.data()))),
+          catchError((error) => {
+            console.error('Members load failed', error);
+            return of([]);
+          }),
+        );
+      });
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );

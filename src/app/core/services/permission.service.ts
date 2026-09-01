@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { EnvironmentInjector, Injectable, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, collection, collectionSnapshots, doc, docData, serverTimestamp, setDoc } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
@@ -13,6 +13,7 @@ const ACTIVE_COMPANY_STORAGE_PREFIX = 'startup-expense-os-active-company';
 export class PermissionService {
   private readonly authService = inject(AuthService);
   private readonly firestore = inject(Firestore);
+  private readonly environmentInjector = inject(EnvironmentInjector);
   private currentProfile: UserProfile | null = null;
   private currentMember: CompanyMember | null = null;
   private currentMemberships: CompanyMembership[] = [];
@@ -26,16 +27,18 @@ export class PermissionService {
         return of([] as CompanyMembership[]);
       }
 
-      return collectionSnapshots(collection(this.firestore, `users/${uid}/memberships`)).pipe(
-        map((snapshots) =>
-          snapshots
-            .map((snapshot) => normalizeMembership(uid, snapshot.id, snapshot.data()))
-            .filter((membership) => membership.status === 'active'),
+      return this.runInFirebaseContext(() =>
+        collectionSnapshots(collection(this.firestore, `users/${uid}/memberships`)).pipe(
+          map((snapshots) =>
+            snapshots
+              .map((snapshot) => normalizeMembership(uid, snapshot.id, snapshot.data()))
+              .filter((membership) => membership.status === 'active'),
+          ),
+          catchError((error) => {
+            console.error('Memberships load failed', error);
+            return of([] as CompanyMembership[]);
+          }),
         ),
-        catchError((error) => {
-          console.error('Memberships load failed', error);
-          return of([] as CompanyMembership[]);
-        }),
       );
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -80,9 +83,11 @@ export class PermissionService {
         return of(null);
       }
 
-      return (docData(doc(this.firestore, `companies/${companyId}/members/${uid}`)) as Observable<CompanyMember | undefined>).pipe(
-        map((member) => member ? ({ ...member, uid }) : null),
-        catchError(() => of(null)),
+      return this.runInFirebaseContext(() =>
+        (docData(doc(this.firestore, `companies/${companyId}/members/${uid}`)) as Observable<CompanyMember | undefined>).pipe(
+          map((member) => member ? ({ ...member, uid }) : null),
+          catchError(() => of(null)),
+        ),
       );
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -160,13 +165,19 @@ export class PermissionService {
     this.selectedCompanyIdSubject.next(companyId);
     this.storeActiveCompanyId(uid, companyId);
 
-    await setDoc(doc(this.firestore, `users/${uid}`), {
-      uid,
-      activeCompanyId: companyId,
-      companyName: membership.companyName,
-      role: membership.role,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    await this.runInFirebaseContext(() =>
+      setDoc(doc(this.firestore, `users/${uid}`), {
+        uid,
+        activeCompanyId: companyId,
+        companyName: membership.companyName,
+        role: membership.role,
+        updatedAt: serverTimestamp(),
+      }, { merge: true }),
+    );
+  }
+
+  private runInFirebaseContext<T>(operation: () => T): T {
+    return runInInjectionContext(this.environmentInjector, operation);
   }
 
   private resolveActiveCompanyId(

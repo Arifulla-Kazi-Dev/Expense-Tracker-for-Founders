@@ -9,6 +9,7 @@ import { CompanyInvite } from '../../core/models/company.model';
 import { roleDisplayName } from '../../core/models/role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { InviteService } from '../../core/services/invite.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 const RETURNING_USER_STORAGE_KEY = 'startup-expense-os-auth-seen';
 
@@ -26,13 +27,12 @@ export class RegisterComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly themeService = inject(ThemeService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   readonly form = this.formBuilder.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]],
+    name: [''],
     companyName: ['', [Validators.required, Validators.minLength(2)]],
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
   errorMessage = '';
@@ -66,6 +66,10 @@ export class RegisterComponent implements OnInit {
     return Boolean(this.inviteToken);
   }
 
+  get isDarkMode(): boolean {
+    return this.themeService.isDark();
+  }
+
   get roleLabel(): string {
     return this.invite ? roleDisplayName(this.invite.role) : 'Founder / Super Admin';
   }
@@ -74,16 +78,12 @@ export class RegisterComponent implements OnInit {
     return this.invite?.companyName ?? 'Your company';
   }
 
-  get nameLabel(): string {
-    return `${this.isInviteFlow ? this.roleLabel : 'Workspace owner'} name`;
-  }
-
-  get namePlaceholder(): string {
-    return this.isInviteFlow ? 'Enter your name' : 'Your name';
-  }
-
   get canSubmit(): boolean {
-    return !this.isSubmitting && !this.isInviteLoading && (!this.isInviteFlow || Boolean(this.invite));
+    if (this.isSubmitting || this.isInviteLoading) {
+      return false;
+    }
+
+    return this.isInviteFlow ? Boolean(this.invite) : this.form.valid;
   }
 
   get loginQueryParams(): Record<string, string> {
@@ -92,38 +92,19 @@ export class RegisterComponent implements OnInit {
       : { intent: 'signin' };
   }
 
+  toggleTheme(): void {
+    this.themeService.toggle();
+  }
+
   invitePanelClass(): string {
     return this.inviteError
       ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
-      : 'border-teal-200 bg-teal-50 text-teal-900 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100';
-  }
-
-  async register(): Promise<void> {
-    if (this.form.invalid || !this.canSubmit) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.isSubmitting = true;
-    this.errorMessage = '';
-
-    try {
-      await this.authService.register({
-        ...this.form.getRawValue(),
-        inviteToken: this.currentInviteToken(),
-      });
-      this.rememberReturningUser();
-      this.clearStoredInvite();
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-    } catch (error) {
-      this.errorMessage = authErrorMessage(error);
-    } finally {
-      this.isSubmitting = false;
-    }
+      : 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-100';
   }
 
   async registerWithGoogle(): Promise<void> {
     if (!this.canSubmit) {
+      this.form.markAllAsTouched();
       return;
     }
 
@@ -141,7 +122,9 @@ export class RegisterComponent implements OnInit {
       });
       this.rememberReturningUser();
       this.clearStoredInvite();
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+      // New owners land on the onboarding follow-up; invited members go straight in.
+      const target = this.isInviteFlow ? '/dashboard' : '/follow-up';
+      await this.router.navigateByUrl(target, { replaceUrl: true });
     } catch (error) {
       this.errorMessage = authErrorMessage(error);
     } finally {
@@ -195,14 +178,7 @@ export class RegisterComponent implements OnInit {
   }
 
   private prefillFromQuery(): void {
-    const email = this.route.snapshot.queryParamMap.get('email')?.trim();
-    const reason = this.route.snapshot.queryParamMap.get('reason')?.trim() ?? '';
-
-    this.setupReason = reason;
-
-    if (email) {
-      this.form.controls.email.setValue(email);
-    }
+    this.setupReason = this.route.snapshot.queryParamMap.get('reason')?.trim() ?? '';
   }
 
   private currentInviteToken(): string | null {
@@ -237,6 +213,16 @@ export class RegisterComponent implements OnInit {
 
 function authErrorMessage(error: unknown): string {
   if (error instanceof Error) {
+    const normalized = `${(error as { code?: string }).code ?? ''} ${error.message}`.toLowerCase();
+
+    if (normalized.includes('popup-closed') || normalized.includes('popup closed') || normalized.includes('cancelled-popup')) {
+      return 'Google Sign-In was closed before it finished. Try again to continue.';
+    }
+
+    if (normalized.includes('popup-blocked')) {
+      return 'Your browser blocked the Google Sign-In popup. Allow popups for this site and try again.';
+    }
+
     return cleanBackendTerms(error.message);
   }
 
