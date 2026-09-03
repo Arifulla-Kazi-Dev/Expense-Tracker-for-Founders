@@ -105,6 +105,13 @@ export interface FeaturePageRow {
   status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive';
   amount: string;
   raw?: Record<string, unknown>;
+  /** When set, this row is shown read-only (no edit/delete) with this label instead — for records that actually live on and must be edited from a different page. */
+  lockedLabel?: string;
+  /** When set, shows a quick-action button (e.g. Pause/Resume) that emits (toggleRecord) instead of opening the edit form. */
+  toggleAction?: {
+    label: string;
+    icon: string;
+  };
 }
 
 export type FeatureFieldType = 'checkbox' | 'date' | 'month' | 'number' | 'select' | 'textarea' | 'text';
@@ -131,6 +138,7 @@ export interface FeatureFormField {
     value: string | number | boolean;
   };
   rows?: number;
+  hint?: string;
 }
 
 export interface FeaturePageConfig {

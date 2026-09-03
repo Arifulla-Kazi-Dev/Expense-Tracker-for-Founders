@@ -273,7 +273,7 @@ export class DashboardService {
       {
         label: 'Upcoming Expenses',
         value: currencyINR(summary.upcomingExpensesAmount),
-        detail: `${summary.upcomingExpensesCount} due in the next 14 days`,
+        detail: `${summary.upcomingExpensesCount} due in the next 30 days`,
         icon: 'alert-circle',
         tone: 'rose',
         progress: Math.min(summary.upcomingExpensesCount * 15, 100),
@@ -540,8 +540,11 @@ export class DashboardService {
 
   private upcomingExpenseEntries(expenses: Expense[], startupCosts: StartupCost[], recurringCosts: RecurringCost[]) {
     const today = startOfDay(new Date());
-    const twoWeeks = new Date(today);
-    twoWeeks.setDate(today.getDate() + 14);
+    const horizon = new Date(today);
+    // 30 days, not 14: a monthly recurring cost's next charge is often ~30 days
+    // out right after it bills, so a shorter window would show 0 upcoming most
+    // of the month even with active recurring costs.
+    horizon.setDate(today.getDate() + 30);
 
     return [
       ...expenses.map((item) => ({ amount: item.pendingAmount || item.amount, date: item.dueDate || item.date })),
@@ -549,7 +552,7 @@ export class DashboardService {
       ...recurringCosts.filter((item) => item.isActive).map((item) => ({ amount: item.amount, date: item.nextBillingDate })),
     ].filter((item) => {
       const date = parseDate(item.date);
-      return date ? date >= today && date <= twoWeeks : false;
+      return date ? date >= today && date <= horizon : false;
     });
   }
 }

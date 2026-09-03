@@ -1,10 +1,11 @@
 import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { PAYMENT_STATUSES } from '../../core/models/expense.model';
+import { Expense, PAYMENT_STATUSES, STARTUP_COST_EXPENSE_CATEGORIES } from '../../core/models/expense.model';
 import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { StartupCost, StartupCostInput } from '../../core/models/startup-cost.model';
+import { ExpenseService } from '../../core/services/expense.service';
 import { FundingService } from '../../core/services/funding.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { StartupCostService } from '../../core/services/startup-cost.service';
@@ -23,8 +24,10 @@ export class StartupCostsComponent implements OnDestroy {
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
   private readonly startupCostService = inject(StartupCostService);
+  private readonly expenseService = inject(ExpenseService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly startupCosts = toSignal(this.startupCostService.list(), { initialValue: [] as StartupCost[] });
+  private readonly expenses = toSignal(this.expenseService.list(), { initialValue: [] as Expense[] });
   private toastTimer?: ReturnType<typeof setTimeout>;
 
   errorMessage = '';
@@ -37,16 +40,24 @@ export class StartupCostsComponent implements OnDestroy {
     }
   }
 
+  /** Expenses logged with a startup-cost-like category — shown here too (view-only) so a founder sees the full picture regardless of which page they used to log it. */
+  get linkedExpenses(): Expense[] {
+    const startupCategories: readonly string[] = STARTUP_COST_EXPENSE_CATEGORIES;
+    return this.expenses().filter((item) => startupCategories.includes(item.category));
+  }
+
   get feature(): FeaturePageConfig {
     const records = this.startupCosts();
-    const total = records.reduce((sum, item) => sum + item.amount, 0);
-    const paid = records.reduce((sum, item) => sum + item.paidAmount, 0);
-    const openItems = records.filter((item) => item.paymentStatus !== 'Paid').length;
+    const linked = this.linkedExpenses;
+    const total = records.reduce((sum, item) => sum + item.amount, 0) + linked.reduce((sum, item) => sum + item.amount, 0);
+    const paid = records.reduce((sum, item) => sum + item.paidAmount, 0) + linked.reduce((sum, item) => sum + item.paidAmount, 0);
+    const openItems = records.filter((item) => item.paymentStatus !== 'Paid').length
+      + linked.filter((item) => item.paymentStatus !== 'Paid').length;
 
     return {
       eyebrow: 'One-Time Startup Costs',
       title: 'Track permanent company setup costs',
-      description: 'Keep company registration, valuation, legal, trademark, domain, and compliance setup in one ledger.',
+      description: 'Keep company registration, valuation, legal, trademark, domain, and compliance setup in one ledger. Costs logged under those categories on the Expenses page show up here too.',
       icon: 'building-2',
       primaryAction: 'Add Cost',
       secondaryAction: 'Realtime',
@@ -73,7 +84,7 @@ export class StartupCostsComponent implements OnDestroy {
   }
 
   get rows(): FeaturePageRow[] {
-    return this.startupCosts().map((item) => ({
+    const nativeRows = this.startupCosts().map((item) => ({
       id: item.id,
       title: item.costName,
       meta: `Startup setup - ${item.date || 'Date not set'} - ${fundingSourceLabel(item)}`,
@@ -81,6 +92,17 @@ export class StartupCostsComponent implements OnDestroy {
       amount: currencyINR(item.amount),
       raw: item as unknown as Record<string, unknown>,
     }));
+
+    const linkedRows = this.linkedExpenses.map((item) => ({
+      id: item.id,
+      title: item.title,
+      meta: `${item.category} - ${item.date || 'Date not set'} - ${fundingSourceLabel(item)}`,
+      status: item.paymentStatus,
+      amount: currencyINR(item.amount),
+      lockedLabel: 'From Expenses',
+    }));
+
+    return [...nativeRows, ...linkedRows];
   }
 
   async save(event: FeatureSaveEvent): Promise<void> {

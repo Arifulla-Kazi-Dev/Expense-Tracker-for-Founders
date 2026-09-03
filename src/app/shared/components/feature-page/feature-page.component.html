@@ -107,8 +107,24 @@
                 {{ row.status }}
               </span>
               <span class="max-w-xs text-right text-sm font-semibold text-slate-800 dark:text-slate-100">{{ row.amount }}</span>
-              @if (canEdit) {
+              @if (row.lockedLabel) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  <svg lucideIcon="link-2" class="size-3"></svg>
+                  {{ row.lockedLabel }}
+                </span>
+              } @else if (canEdit) {
                 <div class="flex items-center gap-1">
+                  @if (row.toggleAction; as toggleAction) {
+                    <button
+                      type="button"
+                      class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"
+                      [attr.aria-label]="toggleAction.label"
+                      [title]="toggleAction.label"
+                      (click)="emitToggle(row)"
+                    >
+                      <svg [lucideIcon]="toggleAction.icon" class="size-4"></svg>
+                    </button>
+                  }
                   <button
                     type="button"
                     class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"
@@ -195,6 +211,9 @@
                   <span class="text-xs font-medium text-slate-400 dark:text-slate-500">Optional</span>
                 }
               </label>
+              @if (field.hint) {
+                <p class="-mt-1 text-xs font-normal leading-4 text-slate-500 dark:text-slate-400">{{ field.hint }}</p>
+              }
 
               @if (field.type === 'select') {
                 @if (isCardSelectField(field)) {

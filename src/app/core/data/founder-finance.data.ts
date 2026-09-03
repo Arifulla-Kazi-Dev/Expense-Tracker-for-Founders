@@ -74,7 +74,7 @@ export const founderMetrics: FounderMetric[] = [
   {
     label: 'Upcoming Expenses',
     value: currencyINR(14500),
-    detail: 'Due in the next 14 days',
+    detail: 'Due in the next 30 days',
     icon: 'alert-circle',
     tone: 'rose',
     progress: 18,

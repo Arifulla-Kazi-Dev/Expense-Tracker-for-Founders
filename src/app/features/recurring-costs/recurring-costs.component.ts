@@ -1,5 +1,6 @@
 import { Component, OnDestroy, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { LucideDynamicIcon } from '@lucide/angular';
 
 import { BILLING_CYCLES, RecurringCost, RecurringCostInput } from '../../core/models/recurring-cost.model';
 import { RecurringCostCharge } from '../../core/models/recurring-cost-charge.model';
@@ -8,6 +9,7 @@ import { Funding } from '../../core/models/funding.model';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { FundingService } from '../../core/services/funding.service';
 import { PermissionService } from '../../core/services/permission.service';
+import { RecurringBillingService, toIsoDate } from '../../core/services/recurring-billing.service';
 import { RecurringCostChargeService } from '../../core/services/recurring-cost-charge.service';
 import { RecurringCostService } from '../../core/services/recurring-cost.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
@@ -19,7 +21,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 @Component({
   selector: 'app-recurring-costs',
   standalone: true,
-  imports: [FeaturePageComponent],
+  imports: [FeaturePageComponent, LucideDynamicIcon],
   templateUrl: './recurring-costs.component.html',
 })
 export class RecurringCostsComponent implements OnDestroy {
@@ -27,6 +29,7 @@ export class RecurringCostsComponent implements OnDestroy {
   private readonly permissionService = inject(PermissionService);
   private readonly recurringCostService = inject(RecurringCostService);
   private readonly recurringCostChargeService = inject(RecurringCostChargeService);
+  private readonly recurringBillingService = inject(RecurringBillingService);
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private readonly recurringCosts = toSignal(this.recurringCostService.list(), { initialValue: [] as RecurringCost[] });
   private readonly recurringCostCharges = toSignal(this.recurringCostChargeService.list(), { initialValue: [] as RecurringCostCharge[] });
@@ -63,7 +66,13 @@ export class RecurringCostsComponent implements OnDestroy {
         { name: 'billingCycle', label: 'Billing cycle', type: 'select', required: true, options: BILLING_CYCLES },
         { name: 'category', label: 'Category', type: 'select', required: true, options: EXPENSE_CATEGORIES },
         { name: 'fundingSourceId', label: 'Funding source used', type: 'select', options: fundingSourceOptions(this.funding()), display: 'cards' },
-        { name: 'nextBillingDate', label: 'Next billing date', type: 'date', required: true },
+        {
+          name: 'nextBillingDate',
+          label: 'Started on',
+          type: 'date',
+          required: true,
+          hint: 'When this cost first started billing — past dates are fine, missed months are billed automatically. Wrong date? Just edit it here.',
+        },
         { name: 'isActive', label: 'Active', type: 'checkbox', placeholder: 'Include in monthly burn' },
         { name: 'notes', label: 'Notes', type: 'textarea', rows: 3 },
       ],
@@ -84,6 +93,9 @@ export class RecurringCostsComponent implements OnDestroy {
       status: item.isActive ? 'Active' : 'Inactive',
       amount: currencyINR(item.amount),
       raw: item as unknown as Record<string, unknown>,
+      toggleAction: item.isActive
+        ? { label: 'Pause billing', icon: 'pause' }
+        : { label: 'Resume billing', icon: 'play' },
     }));
   }
 
@@ -112,6 +124,10 @@ export class RecurringCostsComponent implements OnDestroy {
     return badgeClass('Paid');
   }
 
+  async deleteCharge(id: string): Promise<void> {
+    await this.runMutation(() => this.recurringCostChargeService.delete(id), 'Auto-debit removed');
+  }
+
   async save(event: FeatureSaveEvent): Promise<void> {
     const payload: RecurringCostInput = {
       name: textValue(event.value, 'name'),
@@ -128,10 +144,53 @@ export class RecurringCostsComponent implements OnDestroy {
       () => event.id ? this.recurringCostService.update(event.id, payload) : this.recurringCostService.create(payload),
       event.id ? 'Recurring cost updated' : 'Recurring cost saved',
     );
+
+    if (!this.errorMessage) {
+      // Bill immediately instead of waiting for the next login, so a
+      // backdated start date shows its catch-up charges and updated
+      // Available Cash right away.
+      this.recurringBillingService.runCatchUpBilling().catch((error) => {
+        console.error('Recurring cost auto-billing failed', error);
+      });
+    }
   }
 
   async delete(id: string): Promise<void> {
     await this.runMutation(() => this.recurringCostService.delete(id), 'Recurring cost deleted');
+  }
+
+  async toggleActive(id: string): Promise<void> {
+    const item = this.recurringCosts().find((cost) => cost.id === id);
+
+    if (!item) {
+      return;
+    }
+
+    const resuming = !item.isActive;
+    // Pausing simply stops billing (already skipped by the billing engine while
+    // inactive). Resuming restarts from today instead of the old next-billing-date,
+    // so it never retroactively bills for the months it was paused.
+    const payload: RecurringCostInput = {
+      name: item.name,
+      amount: item.amount,
+      billingCycle: item.billingCycle,
+      category: item.category,
+      nextBillingDate: resuming ? toIsoDate(new Date()) : item.nextBillingDate,
+      isActive: resuming,
+      notes: item.notes,
+      ...fundingAttribution(this.funding(), item.fundingSourceId ?? ''),
+    };
+
+    await this.runMutation(
+      () => this.recurringCostService.update(id, payload),
+      resuming ? 'Recurring cost resumed - billing restarts today' : 'Recurring cost paused',
+    );
+
+    if (!this.errorMessage && resuming) {
+      this.recurringBillingService.runCatchUpBilling().catch((error) => {
+        console.error('Recurring cost auto-billing failed', error);
+      });
+    }
   }
 
   acknowledgeRealtime(): void {

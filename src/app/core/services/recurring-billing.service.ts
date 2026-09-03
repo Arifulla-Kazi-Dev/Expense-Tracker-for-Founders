@@ -101,10 +101,23 @@ export class RecurringBillingService {
         return;
       }
 
-      dueDates.forEach((billedDate) => {
-        const chargeRef = doc(chargesCollection);
-        transaction.set(chargeRef, sanitize({
-          id: chargeRef.id,
+      // Deterministic per-cycle IDs make billing idempotent: re-running catch-up
+      // (or nextBillingDate getting edited back over an already-billed cycle,
+      // e.g. correcting a start date) can never create a second charge for the
+      // same cycle — all reads happen before writes, per Firestore transaction rules.
+      const candidates = dueDates.map((billedDate) => ({
+        billedDate,
+        ref: doc(chargesCollection, `${recurringCostId}_${billedDate}`),
+      }));
+      const existingSnapshots = await Promise.all(candidates.map(({ ref }) => transaction.get(ref)));
+
+      candidates.forEach(({ billedDate, ref }, index) => {
+        if (existingSnapshots[index].exists()) {
+          return;
+        }
+
+        transaction.set(ref, sanitize({
+          id: ref.id,
           uid,
           companyId,
           recurringCostId,
@@ -134,7 +147,7 @@ function sanitize(value: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter((entry) => entry[1] !== undefined));
 }
 
-function toIsoDate(date: Date): string {
+export function toIsoDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

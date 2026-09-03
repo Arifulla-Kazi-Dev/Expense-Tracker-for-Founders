@@ -33,6 +33,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   @Output() saveRecord = new EventEmitter<FeatureSaveEvent>();
   @Output() deleteRecord = new EventEmitter<string>();
   @Output() secondaryAction = new EventEmitter<void>();
+  @Output() toggleRecord = new EventEmitter<string>();
 
   form = new FormGroup<Record<string, FormControl<FeatureFormValue>>>({});
   editingRow: FeaturePageRow | null = null;
@@ -77,7 +78,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   }
 
   openEditModal(row: FeaturePageRow): void {
-    if (!this.canEdit) {
+    if (!this.canEdit || row.lockedLabel) {
       return;
     }
 
@@ -109,8 +110,16 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     this.closeModal();
   }
 
+  emitToggle(row: FeaturePageRow): void {
+    if (!this.canEdit || !row.id || this.isBusy || row.lockedLabel) {
+      return;
+    }
+
+    this.toggleRecord.emit(row.id);
+  }
+
   requestDelete(row: FeaturePageRow): void {
-    if (!this.canEdit || !row.id || this.isBusy) {
+    if (!this.canEdit || !row.id || this.isBusy || row.lockedLabel) {
       return;
     }
 

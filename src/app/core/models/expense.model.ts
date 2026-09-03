@@ -27,6 +27,9 @@ export const EXPENSE_CATEGORIES = [
 
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
+/** Expense categories that describe the same kind of one-time spend the Startup Costs ledger tracks. */
+export const STARTUP_COST_EXPENSE_CATEGORIES: ExpenseCategory[] = ['Legal & Compliance', 'Valuation', 'Company Registration'];
+
 export interface Expense extends FundingSourceAttribution {
   id: string;
   uid: string;
