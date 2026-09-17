@@ -27,6 +27,8 @@ export interface AttendanceRecord {
   markedAt: FirestoreDate;
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
+  /** Set when a founder/co-founder/HR manager marked this day present directly, instead of the member checking in themselves. */
+  markedBy?: string;
 }
 
 export type AttendanceDayStatus = 'Present' | 'Absent' | 'Holiday' | 'Weekend' | 'Future';

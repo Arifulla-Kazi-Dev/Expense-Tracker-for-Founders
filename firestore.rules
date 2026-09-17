@@ -411,15 +411,23 @@ service cloud.firestore {
 
       match /attendance/{recordId} {
         allow read: if isCompanyMember(companyId);
-        // Verifies the submitted code server-side via get(), without ever
-        // granting the submitter read access to the real token. No `update`
-        // rule, so a second check-in attempt on the same doc ID (uid_date)
-        // is rejected outright — one record per person per day.
+        // Two ways to create a record: (1) self check-in, verified server-side
+        // via get() without ever granting the submitter read access to the
+        // real token, or (2) a manager override, marking any employee present
+        // directly (founder/co-founder/HR only). No `update` rule, so a
+        // second create on the same doc ID (uid_date) is rejected outright —
+        // one record per person per day; "marking absent" deletes the record
+        // instead of writing over it.
         allow create: if isCompanyMember(companyId)
-          && request.resource.data.uid == request.auth.uid
           && request.resource.data.date is string
-          && request.resource.data.tokenSubmitted ==
-             get(/databases/$(database)/documents/companies/$(companyId)/attendanceTokens/$(request.resource.data.date)).data.token;
+          && (
+            canManageAttendance(companyId)
+            || (
+              request.resource.data.uid == request.auth.uid
+              && request.resource.data.tokenSubmitted ==
+                 get(/databases/$(database)/documents/companies/$(companyId)/attendanceTokens/$(request.resource.data.date)).data.token
+            )
+          );
         allow delete: if canManageAttendance(companyId);
       }
     }

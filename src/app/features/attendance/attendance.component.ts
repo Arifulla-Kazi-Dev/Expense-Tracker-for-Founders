@@ -8,6 +8,7 @@ import { AttendanceRecord, AttendanceToken, Holiday, HolidayInput } from '../../
 import { CompanyMember } from '../../core/models/company.model';
 import { HolidayRegion, INDIA_PUBLIC_HOLIDAYS, REGION_LABELS, holidaysForYear } from '../../core/data/india-holidays.data';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
+import { UserRole } from '../../core/models/role.model';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { AttendanceTokenService } from '../../core/services/attendance-token.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -88,11 +89,22 @@ export class AttendanceComponent implements OnDestroy {
     return this.authService.currentUser?.uid ?? null;
   }
 
-  /** Selectable for attendance viewing/tracking — excludes founder/co-founder, who aren't tracked. */
   get activeMembers(): CompanyMember[] {
-    return this.members().filter(
-      (member) => member.status === 'active' && member.role !== 'founder' && member.role !== 'cofounder',
-    );
+    return this.members().filter((member) => member.status === 'active');
+  }
+
+  /** Founders/co-founders don't check in, but are never treated as absent either — always shown Present. */
+  isAlwaysPresentUid(uid: string): boolean {
+    const role = this.roleForUid(uid);
+    return role === 'founder' || role === 'cofounder';
+  }
+
+  private roleForUid(uid: string): UserRole | null {
+    if (uid === this.currentUid) {
+      return this.permissionService.currentRole;
+    }
+
+    return this.members().find((member) => member.uid === uid)?.role ?? null;
   }
 
   get today(): string {
@@ -114,23 +126,15 @@ export class AttendanceComponent implements OnDestroy {
   }
 
   get viewedUid(): string {
-    if (this.selectedUid) {
-      return this.selectedUid;
-    }
-
-    if (!this.isFounderOrCofounder && this.currentUid) {
-      return this.currentUid;
-    }
-
-    return this.activeMembers[0]?.uid ?? '';
+    return this.selectedUid || this.currentUid || '';
   }
 
   get viewedMemberName(): string {
-    if (!this.selectedUid && !this.isFounderOrCofounder) {
+    if (!this.selectedUid || this.selectedUid === this.currentUid) {
       return this.profile()?.name ?? 'Me';
     }
 
-    return this.activeMembers.find((member) => member.uid === this.viewedUid)?.name ?? 'Select a team member';
+    return this.activeMembers.find((member) => member.uid === this.selectedUid)?.name ?? 'Member';
   }
 
   get viewedMemberInitials(): string {
@@ -176,6 +180,53 @@ export class AttendanceComponent implements OnDestroy {
   onMonthChange(change: { year: number; month: number }): void {
     this.viewedYear = change.year;
     this.viewedMonth = change.month;
+  }
+
+  /** Whether clicking a day in the currently viewed calendar should offer a mark present/absent toggle. */
+  get canToggleAttendance(): boolean {
+    return this.canManage() && !this.isAlwaysPresentUid(this.viewedUid);
+  }
+
+  isTogglingAttendance = false;
+
+  async onCalendarDayClick(date: string): Promise<void> {
+    const uid = this.viewedUid;
+
+    if (!this.canToggleAttendance || !uid || this.isTogglingAttendance) {
+      return;
+    }
+
+    if (date > this.today) {
+      this.showToast("Can't mark attendance for a future date.");
+      return;
+    }
+
+    if (isWeekend(date) || this.holidays().some((holiday) => holiday.date === date)) {
+      this.showToast('That day is already a day off.');
+      return;
+    }
+
+    const memberName = uid === this.currentUid
+      ? (this.profile()?.name ?? 'Me')
+      : (this.activeMembers.find((member) => member.uid === uid)?.name ?? 'Member');
+    const existing = this.records().find((record) => record.uid === uid && record.date === date);
+
+    this.isTogglingAttendance = true;
+    this.errorMessage = '';
+
+    try {
+      if (existing) {
+        await this.attendanceService.delete(existing.id);
+        this.showToast(`Marked ${memberName} absent for ${this.formatDate(date)}.`);
+      } else {
+        await this.attendanceService.markPresent(uid, date, memberName);
+        this.showToast(`Marked ${memberName} present for ${this.formatDate(date)}.`);
+      }
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : 'Unable to update attendance.';
+    } finally {
+      this.isTogglingAttendance = false;
+    }
   }
 
   async submitToken(): Promise<void> {
@@ -328,6 +379,7 @@ export class AttendanceComponent implements OnDestroy {
     const today = this.today;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const markers: CalendarMarker[] = [];
+    const alwaysPresent = this.isAlwaysPresentUid(uid);
 
     for (let day = 1; day <= daysInMonth; day += 1) {
       const date = toIsoDate(new Date(year, month, day));
@@ -345,6 +397,11 @@ export class AttendanceComponent implements OnDestroy {
 
       if (holiday) {
         markers.push({ date, tone: 'sky', fill: true, label: holiday.name });
+        continue;
+      }
+
+      if (alwaysPresent) {
+        markers.push({ date, tone: 'emerald', fill: true, label: 'Present' });
         continue;
       }
 

@@ -59,6 +59,44 @@ export class AttendanceService {
     }
   }
 
+  /**
+   * Manager override: marks another member (or self) present for a given day
+   * without a code, e.g. when someone forgot to check in. Rejected by
+   * Firestore rules for anyone without the manageAttendance permission.
+   */
+  async markPresent(uid: string, date: string, memberName: string): Promise<void> {
+    return runInInjectionContext(this.environmentInjector, () => this.markPresentInternal(uid, date, memberName));
+  }
+
+  private async markPresentInternal(uid: string, date: string, memberName: string): Promise<void> {
+    const managerUid = this.authService.currentUser?.uid;
+    const companyId = this.permissionService.activeCompanyId;
+
+    if (!managerUid || !companyId) {
+      throw new Error('You must be signed in to update attendance.');
+    }
+
+    const id = `${uid}_${date}`;
+    const ref = doc(this.firestore, `companies/${companyId}/attendance/${id}`);
+
+    try {
+      await setDoc(ref, {
+        id,
+        uid,
+        companyId,
+        memberName,
+        date,
+        tokenSubmitted: 'MANAGER_OVERRIDE',
+        markedBy: managerUid,
+        markedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch {
+      throw new Error('Unable to mark attendance for that day.');
+    }
+  }
+
   async delete(id: string): Promise<void> {
     return this.crud.delete(this.collectionName, id);
   }
