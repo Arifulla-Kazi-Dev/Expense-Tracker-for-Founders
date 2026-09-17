@@ -102,7 +102,7 @@ export interface FeaturePageRow {
   id?: string;
   title: string;
   meta: string;
-  status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive';
+  status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive' | 'Done' | 'Overdue';
   amount: string;
   raw?: Record<string, unknown>;
   /** When set, this row is shown read-only (no edit/delete) with this label instead — for records that actually live on and must be edited from a different page. */
@@ -111,6 +111,13 @@ export interface FeaturePageRow {
   toggleAction?: {
     label: string;
     icon: string;
+  };
+  /** When set, shows a quick-action button that navigates to another page's feature form, pre-filled via query params — e.g. "log this compliance item's cost as an Expense". */
+  linkAction?: {
+    label: string;
+    icon: string;
+    route: string;
+    queryParams?: Record<string, string>;
   };
 }
 

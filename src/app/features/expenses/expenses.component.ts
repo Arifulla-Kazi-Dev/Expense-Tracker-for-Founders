@@ -1,5 +1,6 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 
 import { EXPENSE_CATEGORIES, EXPENSE_TYPES, Expense, ExpenseInput, PAYMENT_STATUSES } from '../../core/models/expense.model';
 import { Funding } from '../../core/models/funding.model';
@@ -10,7 +11,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { currencyINR } from '../../core/utils/finance-formatters';
 import { numberValue, textValue } from '../../core/utils/feature-form-values';
 import { fundingAttribution, fundingSourceLabel, fundingSourceOptions } from '../../core/utils/funding-source-options';
-import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
+import { FeatureFormValue, FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/feature-page/feature-page.component';
 
 @Component({
   selector: 'app-expenses',
@@ -18,22 +19,50 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
   imports: [FeaturePageComponent],
   templateUrl: './expenses.component.html',
 })
-export class ExpensesComponent implements OnDestroy {
+export class ExpensesComponent implements AfterViewInit, OnDestroy {
   private readonly expenseService = inject(ExpenseService);
   private readonly fundingService = inject(FundingService);
   private readonly permissionService = inject(PermissionService);
+  private readonly route = inject(ActivatedRoute);
   private readonly expenses = toSignal(this.expenseService.list(), { initialValue: [] as Expense[] });
   private readonly funding = toSignal(this.fundingService.list(), { initialValue: [] as Funding[] });
   private toastTimer?: ReturnType<typeof setTimeout>;
+
+  @ViewChild(FeaturePageComponent) private featurePage?: FeaturePageComponent;
 
   errorMessage = '';
   isBusy = false;
   toastMessage = '';
 
+  ngAfterViewInit(): void {
+    // Arriving from another page's "log this as an expense" link (e.g. a
+    // Compliance item) — pre-fill and open the add form immediately.
+    if (Object.keys(this.initialValues).length) {
+      Promise.resolve().then(() => this.featurePage?.openCreateModal());
+    }
+  }
+
   ngOnDestroy(): void {
     if (this.toastTimer) {
       clearTimeout(this.toastTimer);
     }
+  }
+
+  get initialValues(): Record<string, FeatureFormValue> {
+    const params = this.route.snapshot.queryParamMap;
+    const values: Record<string, FeatureFormValue> = {};
+    const title = params.get('prefillTitle');
+    const category = params.get('prefillCategory');
+
+    if (title) {
+      values['title'] = title;
+    }
+
+    if (category) {
+      values['category'] = category;
+    }
+
+    return values;
   }
 
   get feature(): FeaturePageConfig {

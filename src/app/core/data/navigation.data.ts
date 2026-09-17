@@ -8,6 +8,7 @@ export const navigationItems: NavigationItem[] = [
   { label: 'Salaries', icon: 'users', route: '/team-payments' },
   { label: 'Startup Costs', icon: 'building-2', route: '/startup-costs' },
   { label: 'Recurring Costs', icon: 'repeat-2', route: '/recurring-costs' },
+  { label: 'Compliance', icon: 'shield-check', route: '/compliance' },
   { label: 'Reports', icon: 'bar-chart-3', route: '/reports' },
   { label: 'Workspace Notes', icon: 'notebook-text', route: '/founder-notes' },
   { label: 'Team', icon: 'users', route: '/team' },

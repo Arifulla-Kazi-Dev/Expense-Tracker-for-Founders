@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideDynamicIcon } from '@lucide/angular';
+import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { FeatureFormField, FeatureFormOption, FeaturePageConfig, FeaturePageRow, Tone } from '../../../core/models/dashboard.models';
@@ -18,7 +19,7 @@ export interface FeatureSaveEvent {
 @Component({
   selector: 'app-feature-page',
   standalone: true,
-  imports: [CommonModule, ConfirmDialogComponent, LucideDynamicIcon, ReactiveFormsModule],
+  imports: [CommonModule, ConfirmDialogComponent, LucideDynamicIcon, ReactiveFormsModule, RouterLink],
   templateUrl: './feature-page.component.html',
   styleUrl: './feature-page.component.css',
 })
@@ -29,6 +30,8 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   @Input() isBusy = false;
   @Input() canEdit = true;
   @Input() toastMessage = '';
+  /** Seed values applied when opening the create form (not edit) — e.g. arriving from another page's "log this as an X" link. */
+  @Input() initialValues: Record<string, FeatureFormValue> = {};
 
   @Output() saveRecord = new EventEmitter<FeatureSaveEvent>();
   @Output() deleteRecord = new EventEmitter<string>();
@@ -73,7 +76,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
     }
 
     this.editingRow = null;
-    this.resetForm();
+    this.resetForm(this.initialValues);
     this.isModalOpen = true;
   }
 

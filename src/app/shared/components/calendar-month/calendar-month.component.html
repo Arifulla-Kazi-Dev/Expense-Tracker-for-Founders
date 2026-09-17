@@ -1,0 +1,76 @@
+<div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/70">
+  <div class="flex items-center justify-between gap-3">
+    <h3 class="text-sm font-semibold">{{ monthLabel() }}</h3>
+    <div class="flex items-center gap-1">
+      @if (!isCurrentMonth()) {
+        <button
+          type="button"
+          class="mr-1 rounded-md px-2 py-1 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-400/10"
+          (click)="goToday()"
+        >
+          Today
+        </button>
+      }
+      <button
+        type="button"
+        class="flex size-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"
+        aria-label="Previous month"
+        (click)="previousMonth()"
+      >
+        <svg lucideIcon="chevron-left" class="size-4"></svg>
+      </button>
+      <button
+        type="button"
+        class="flex size-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"
+        aria-label="Next month"
+        (click)="nextMonth()"
+      >
+        <svg lucideIcon="chevron-right" class="size-4"></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-3 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+    @for (label of weekdayLabels; track label) {
+      <span>{{ label }}</span>
+    }
+  </div>
+
+  <div class="mt-1 grid grid-cols-7 gap-1">
+    @for (week of weeks(); track $index) {
+      @for (cell of week; track cell.date) {
+        <button
+          type="button"
+          class="flex aspect-square flex-col items-center justify-start gap-1 rounded-md p-1 text-xs transition"
+          [ngClass]="cell.fillTone ? fillClass(cell.fillTone) : ''"
+          [class.text-slate-300]="!cell.inCurrentMonth && !cell.fillTone"
+          [class.dark:text-slate-700]="!cell.inCurrentMonth && !cell.fillTone"
+          [class.text-slate-700]="cell.inCurrentMonth && !cell.fillTone"
+          [class.dark:text-slate-200]="cell.inCurrentMonth && !cell.fillTone"
+          [class.hover:bg-slate-50]="cell.inCurrentMonth && !cell.fillTone"
+          [class.dark:hover:bg-slate-900]="cell.inCurrentMonth && !cell.fillTone"
+          [class.ring-2]="cell.isToday"
+          [class.ring-violet-400]="cell.isToday"
+          [title]="cell.markers.length ? (cell.markers[0].label ?? '') : ''"
+          (click)="onDayClick(cell)"
+        >
+          <span class="font-semibold">{{ cell.day }}</span>
+          @if (cell.markers.length && !cell.fillTone) {
+            <span class="flex flex-wrap items-center justify-center gap-0.5">
+              @for (marker of cell.markers.slice(0, 3); track $index) {
+                <span
+                  class="size-1.5 rounded-full"
+                  [ngClass]="markerDotClass(marker.tone)"
+                  [title]="marker.label ?? ''"
+                ></span>
+              }
+              @if (cell.markers.length > 3) {
+                <span class="text-[10px] leading-none text-slate-400 dark:text-slate-500">+{{ cell.markers.length - 3 }}</span>
+              }
+            </span>
+          }
+        </button>
+      }
+    }
+  </div>
+</div>

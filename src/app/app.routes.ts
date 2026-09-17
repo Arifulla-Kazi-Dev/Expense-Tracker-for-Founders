@@ -58,6 +58,11 @@ export const routes: Routes = [
           import('./features/recurring-costs/recurring-costs.component').then((m) => m.RecurringCostsComponent),
       },
       {
+        path: 'compliance',
+        loadComponent: () =>
+          import('./features/compliance/compliance.component').then((m) => m.ComplianceComponent),
+      },
+      {
         path: 'reports',
         loadComponent: () =>
           import('./features/reports/reports.component').then((m) => m.ReportsComponent),

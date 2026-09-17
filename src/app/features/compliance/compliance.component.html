@@ -1,0 +1,28 @@
+<app-feature-page
+  [feature]="feature"
+  [rows]="rows"
+  [isBusy]="isBusy"
+  [canEdit]="canEdit()"
+  [errorMessage]="errorMessage"
+  [toastMessage]="toastMessage"
+  (saveRecord)="save($event)"
+  (deleteRecord)="delete($event)"
+  (toggleRecord)="markDone($event)"
+  (secondaryAction)="acknowledgeRealtime()"
+/>
+
+<section class="animate-rise-in px-3 pb-24 sm:px-5 lg:px-7 lg:pb-10">
+  <div class="ui-panel rounded-lg p-5">
+    <div>
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Calendar</p>
+      <h2 class="mt-1 text-xl font-semibold">Due dates at a glance</h2>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Amber marks an upcoming due date, red means it's overdue. Click a date for details in the list above.
+      </p>
+    </div>
+
+    <div class="mt-4 max-w-md">
+      <app-calendar-month [markers]="calendarMarkers" />
+    </div>
+  </div>
+</section>

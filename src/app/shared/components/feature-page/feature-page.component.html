@@ -125,6 +125,17 @@
                       <svg [lucideIcon]="toggleAction.icon" class="size-4"></svg>
                     </button>
                   }
+                  @if (row.linkAction; as linkAction) {
+                    <a
+                      [routerLink]="linkAction.route"
+                      [queryParams]="linkAction.queryParams ?? {}"
+                      class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"
+                      [attr.aria-label]="linkAction.label"
+                      [title]="linkAction.label"
+                    >
+                      <svg [lucideIcon]="linkAction.icon" class="size-4"></svg>
+                    </a>
+                  }
                   <button
                     type="button"
                     class="flex size-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white"

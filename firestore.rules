@@ -87,6 +87,14 @@ service cloud.firestore {
       return hasPermission(companyId, 'manageFounderNotes', ['founder', 'cofounder', 'operations-manager']);
     }
 
+    function canManageCompliance(companyId) {
+      return hasPermission(companyId, 'manageCompliance', ['founder', 'cofounder', 'operations-manager']);
+    }
+
+    function canManageAttendance(companyId) {
+      return hasPermission(companyId, 'manageAttendance', ['founder', 'cofounder', 'hr-manager']);
+    }
+
     function isNonNegative(value) {
       return value == null || ((value is int || value is float) && value >= 0);
     }
@@ -379,6 +387,40 @@ service cloud.firestore {
       match /founderNotes/{docId} {
         allow read: if isCompanyMember(companyId);
         allow write: if canManageFounderNotes(companyId);
+      }
+
+      match /complianceItems/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow create, update: if canManageCompliance(companyId);
+        allow delete: if canManageCompliance(companyId);
+      }
+
+      match /holidays/{docId} {
+        allow read: if isCompanyMember(companyId);
+        allow create, update: if canManageAttendance(companyId);
+        allow delete: if canManageAttendance(companyId);
+      }
+
+      match /attendanceTokens/{date} {
+        // Only attendance managers can ever read the value — an employee's
+        // client never gains read access to it, whether the code they typed
+        // was right or wrong. See /attendance below for how that's verified.
+        allow read: if canManageAttendance(companyId);
+        allow create, update: if canManageAttendance(companyId);
+      }
+
+      match /attendance/{recordId} {
+        allow read: if isCompanyMember(companyId);
+        // Verifies the submitted code server-side via get(), without ever
+        // granting the submitter read access to the real token. No `update`
+        // rule, so a second check-in attempt on the same doc ID (uid_date)
+        // is rejected outright — one record per person per day.
+        allow create: if isCompanyMember(companyId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.date is string
+          && request.resource.data.tokenSubmitted ==
+             get(/databases/$(database)/documents/companies/$(companyId)/attendanceTokens/$(request.resource.data.date)).data.token;
+        allow delete: if canManageAttendance(companyId);
       }
     }
 

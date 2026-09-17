@@ -21,6 +21,8 @@ export type Permission =
   | 'manageStartupCosts'
   | 'manageRecurringCosts'
   | 'manageFounderNotes'
+  | 'manageCompliance'
+  | 'manageAttendance'
   | 'viewReports'
   | 'exportReports'
   | 'readOnly';
@@ -66,6 +68,8 @@ export const PERMISSIONS: Permission[] = [
   'manageStartupCosts',
   'manageRecurringCosts',
   'manageFounderNotes',
+  'manageCompliance',
+  'manageAttendance',
   'viewReports',
   'exportReports',
   'readOnly',
@@ -96,10 +100,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<Permission, boolean>> = {
     'manageExpenses',
     'manageRecurringCosts',
     'manageFounderNotes',
+    'manageCompliance',
     'viewReports',
   ]),
   'hr-manager': permissionSet([
     'manageTeamPayments',
+    'manageAttendance',
     'viewReports',
   ]),
   'team-member': permissionSet(['readOnly']),

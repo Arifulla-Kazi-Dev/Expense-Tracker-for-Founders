@@ -11,6 +11,7 @@ import { NavigationItem } from '../../core/models/dashboard.models';
 import { CompanyMembership } from '../../core/models/company.model';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService, emptyDashboardSummary } from '../../core/services/dashboard.service';
+import { AttendanceTokenService } from '../../core/services/attendance-token.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { RecurringBillingService } from '../../core/services/recurring-billing.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -42,6 +43,7 @@ export class AppShellComponent implements OnDestroy {
   private readonly dashboardService = inject(DashboardService);
   private readonly permissionService = inject(PermissionService);
   private readonly recurringBillingService = inject(RecurringBillingService);
+  private readonly attendanceTokenService = inject(AttendanceTokenService);
   private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
@@ -72,6 +74,9 @@ export class AppShellComponent implements OnDestroy {
       .subscribe(() => {
         this.recurringBillingService.runCatchUpBilling().catch((error) => {
           console.error('Recurring cost auto-billing failed', error);
+        });
+        this.attendanceTokenService.ensureTodayToken().catch((error) => {
+          console.error('Attendance token generation failed', error);
         });
       });
   }

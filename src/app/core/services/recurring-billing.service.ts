@@ -4,9 +4,12 @@ import type { DocumentData, UpdateData } from '@angular/fire/firestore';
 import { firstValueFrom, map } from 'rxjs';
 
 import { BillingCycle, RecurringCost } from '../models/recurring-cost.model';
+import { computeDueDates, toIsoDate } from '../utils/date-cycles';
 import { AuthService } from './auth.service';
 import { PermissionService } from './permission.service';
 import { RecurringCostService } from './recurring-cost.service';
+
+export { toIsoDate };
 
 export const MAX_CATCH_UP_CYCLES = 60;
 
@@ -22,17 +25,8 @@ export interface DueCyclesResult {
  * afterward. Capped so a stale or bad date can't generate unbounded charges.
  */
 export function computeDueCycles(nextBillingDate: string, billingCycle: BillingCycle, today: string): DueCyclesResult {
-  const dueDates: string[] = [];
-  let cursor = nextBillingDate;
-  let iterations = 0;
-
-  while (cursor && cursor <= today && iterations < MAX_CATCH_UP_CYCLES) {
-    dueDates.push(cursor);
-    cursor = advanceBillingDate(cursor, billingCycle);
-    iterations += 1;
-  }
-
-  return { dueDates, nextBillingDate: cursor };
+  const result = computeDueDates(nextBillingDate, billingCycle, today, MAX_CATCH_UP_CYCLES);
+  return { dueDates: result.dueDates, nextBillingDate: result.nextDate };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -145,36 +139,4 @@ export class RecurringBillingService {
 
 function sanitize(value: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter((entry) => entry[1] !== undefined));
-}
-
-export function toIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseIsoDate(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-
-  if (!match) {
-    return null;
-  }
-
-  const [, year, month, day] = match;
-  return new Date(Number(year), Number(month) - 1, Number(day));
-}
-
-function advanceBillingDate(value: string, cycle: BillingCycle): string {
-  const date = parseIsoDate(value) ?? new Date();
-
-  if (cycle === 'Quarterly') {
-    date.setMonth(date.getMonth() + 3);
-  } else if (cycle === 'Yearly') {
-    date.setFullYear(date.getFullYear() + 1);
-  } else {
-    date.setMonth(date.getMonth() + 1);
-  }
-
-  return toIsoDate(date);
 }
