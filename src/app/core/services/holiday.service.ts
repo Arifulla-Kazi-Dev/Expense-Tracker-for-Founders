@@ -23,4 +23,15 @@ export class HolidayService {
   delete(id: string) {
     return this.crud.delete(this.collectionName, id);
   }
+
+  async bulkCreate(items: HolidayInput[]): Promise<number> {
+    let created = 0;
+
+    for (const item of items) {
+      await this.crud.create(this.collectionName, item);
+      created += 1;
+    }
+
+    return created;
+  }
 }

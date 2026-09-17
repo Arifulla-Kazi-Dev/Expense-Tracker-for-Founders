@@ -63,6 +63,11 @@ export const routes: Routes = [
           import('./features/compliance/compliance.component').then((m) => m.ComplianceComponent),
       },
       {
+        path: 'attendance',
+        loadComponent: () =>
+          import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent),
+      },
+      {
         path: 'reports',
         loadComponent: () =>
           import('./features/reports/reports.component').then((m) => m.ReportsComponent),
