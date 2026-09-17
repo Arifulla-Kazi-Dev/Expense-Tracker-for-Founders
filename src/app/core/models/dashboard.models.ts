@@ -161,4 +161,6 @@ export interface FeaturePageConfig {
   emptyDescription?: string;
   fields?: FeatureFormField[];
   formTitle?: string;
+  /** When true, the "Recent records" list starts collapsed behind a "Show records" toggle instead of always expanded — for lists that grow long (e.g. holidays). */
+  collapsible?: boolean;
 }

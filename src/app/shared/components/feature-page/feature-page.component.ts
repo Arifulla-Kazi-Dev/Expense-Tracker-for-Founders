@@ -42,6 +42,7 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
   editingRow: FeaturePageRow | null = null;
   pendingDeleteRow: FeaturePageRow | null = null;
   isModalOpen = false;
+  rowsExpanded = false;
   private fieldSignature = '';
   private formBehaviorSubscription?: Subscription;
 
@@ -51,6 +52,14 @@ export class FeaturePageComponent implements OnChanges, OnDestroy {
 
   get hasRows(): boolean {
     return this.rows.length > 0;
+  }
+
+  get showRowsList(): boolean {
+    return !this.feature.collapsible || this.rowsExpanded;
+  }
+
+  toggleRowsExpanded(): void {
+    this.rowsExpanded = !this.rowsExpanded;
   }
 
   ngOnChanges(changes: SimpleChanges): void {

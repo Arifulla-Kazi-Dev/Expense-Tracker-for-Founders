@@ -66,8 +66,74 @@ export function fixedNationalHolidays(year: number): HolidaySeed[] {
   ].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function holidaysForYear(year: number): HolidaySeed[] {
-  return INDIA_PUBLIC_HOLIDAYS[year] ?? fixedNationalHolidays(year);
+export type HolidayRegion = 'goa' | 'bangalore' | 'pune';
+
+export const REGION_LABELS: Record<HolidayRegion, string> = {
+  goa: 'Goa',
+  bangalore: 'Bangalore (Karnataka)',
+  pune: 'Pune (Maharashtra)',
+};
+
+/** Fixed-date state holidays that apply every year, regardless of curated-table coverage. */
+const FIXED_REGIONAL_HOLIDAYS: Record<HolidayRegion, (year: number) => HolidaySeed[]> = {
+  goa: (year) => [
+    { date: `${year}-06-18`, name: 'Goa Revolution Day' },
+    { date: `${year}-12-03`, name: 'Feast of St. Francis Xavier' },
+    { date: `${year}-12-19`, name: 'Goa Liberation Day' },
+  ],
+  bangalore: (year) => [{ date: `${year}-11-01`, name: 'Karnataka Rajyotsava' }],
+  pune: (year) => [{ date: `${year}-05-01`, name: 'Maharashtra Din' }],
+};
+
+/**
+ * Movable regional festival dates (state new year, Ganesh Chaturthi, etc.) — same
+ * best-known-values caveat as the national festival list above. Extend as new years
+ * are published.
+ */
+const REGIONAL_FESTIVAL_HOLIDAYS: Record<HolidayRegion, Record<number, HolidaySeed[]>> = {
+  goa: {},
+  bangalore: {
+    2025: [
+      { date: '2025-03-30', name: 'Ugadi' },
+      { date: '2025-04-30', name: 'Basava Jayanti' },
+      { date: '2025-08-08', name: 'Varamahalakshmi Vrata' },
+      { date: '2025-08-27', name: 'Ganesh Chaturthi' },
+    ],
+    2026: [
+      { date: '2026-03-19', name: 'Ugadi' },
+      { date: '2026-04-19', name: 'Basava Jayanti' },
+      { date: '2026-08-14', name: 'Varamahalakshmi Vrata' },
+      { date: '2026-09-14', name: 'Ganesh Chaturthi' },
+    ],
+  },
+  pune: {
+    2025: [
+      { date: '2025-03-30', name: 'Gudi Padwa' },
+      { date: '2025-08-27', name: 'Ganesh Chaturthi' },
+    ],
+    2026: [
+      { date: '2026-03-19', name: 'Gudi Padwa' },
+      { date: '2026-09-14', name: 'Ganesh Chaturthi' },
+    ],
+  },
+};
+
+function regionalHolidaysForYear(year: number, region: HolidayRegion): HolidaySeed[] {
+  const fixed = FIXED_REGIONAL_HOLIDAYS[region](year);
+  const festivals = REGIONAL_FESTIVAL_HOLIDAYS[region][year] ?? [];
+  return [...fixed, ...festivals];
+}
+
+export function holidaysForYear(year: number, region?: HolidayRegion | ''): HolidaySeed[] {
+  const national = INDIA_PUBLIC_HOLIDAYS[year] ?? fixedNationalHolidays(year);
+
+  if (!region) {
+    return national;
+  }
+
+  const merged = new Map<string, HolidaySeed>();
+  [...national, ...regionalHolidaysForYear(year, region)].forEach((item) => merged.set(item.date, item));
+  return [...merged.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Anonymous Gregorian algorithm (Meeus/Jones/Butcher) for Easter Sunday, minus two days. */

@@ -1,3 +1,4 @@
+import { NgClass } from '@angular/common';
 import { Component, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -5,7 +6,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 
 import { AttendanceRecord, AttendanceToken, Holiday, HolidayInput } from '../../core/models/attendance.model';
 import { CompanyMember } from '../../core/models/company.model';
-import { INDIA_PUBLIC_HOLIDAYS, holidaysForYear } from '../../core/data/india-holidays.data';
+import { HolidayRegion, INDIA_PUBLIC_HOLIDAYS, REGION_LABELS, holidaysForYear } from '../../core/data/india-holidays.data';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { AttendanceTokenService } from '../../core/services/attendance-token.service';
@@ -27,7 +28,7 @@ interface MonthStats {
 @Component({
   selector: 'app-attendance',
   standalone: true,
-  imports: [FormsModule, LucideDynamicIcon, CalendarMonthComponent, FeaturePageComponent],
+  imports: [FormsModule, NgClass, LucideDynamicIcon, CalendarMonthComponent, FeaturePageComponent],
   templateUrl: './attendance.component.html',
 })
 export class AttendanceComponent implements OnDestroy {
@@ -48,9 +49,16 @@ export class AttendanceComponent implements OnDestroy {
   isCheckingIn = false;
   checkInError = '';
   selectedUid = '';
+  memberPickerOpen = false;
 
   holidayLoadYear = new Date().getFullYear();
+  holidayRegion: HolidayRegion | '' = '';
   isLoadingHolidays = false;
+
+  readonly regionOptions: { value: HolidayRegion | ''; label: string }[] = [
+    { value: '', label: 'All-India only' },
+    ...(Object.entries(REGION_LABELS) as [HolidayRegion, string][]).map(([value, label]) => ({ value, label })),
+  ];
 
   isBusy = false;
   errorMessage = '';
@@ -70,12 +78,21 @@ export class AttendanceComponent implements OnDestroy {
     return this.permissionService.can('manageAttendance');
   }
 
+  /** Founders/co-founders run the company; attendance tracking is for their team, not themselves. */
+  get isFounderOrCofounder(): boolean {
+    const role = this.permissionService.currentRole;
+    return role === 'founder' || role === 'cofounder';
+  }
+
   get currentUid(): string | null {
     return this.authService.currentUser?.uid ?? null;
   }
 
+  /** Selectable for attendance viewing/tracking — excludes founder/co-founder, who aren't tracked. */
   get activeMembers(): CompanyMember[] {
-    return this.members().filter((member) => member.status === 'active');
+    return this.members().filter(
+      (member) => member.status === 'active' && member.role !== 'founder' && member.role !== 'cofounder',
+    );
   }
 
   get today(): string {
@@ -97,15 +114,44 @@ export class AttendanceComponent implements OnDestroy {
   }
 
   get viewedUid(): string {
-    return this.selectedUid || this.currentUid || '';
+    if (this.selectedUid) {
+      return this.selectedUid;
+    }
+
+    if (!this.isFounderOrCofounder && this.currentUid) {
+      return this.currentUid;
+    }
+
+    return this.activeMembers[0]?.uid ?? '';
   }
 
   get viewedMemberName(): string {
-    if (!this.selectedUid || this.selectedUid === this.currentUid) {
+    if (!this.selectedUid && !this.isFounderOrCofounder) {
       return this.profile()?.name ?? 'Me';
     }
 
-    return this.activeMembers.find((member) => member.uid === this.selectedUid)?.name ?? 'Member';
+    return this.activeMembers.find((member) => member.uid === this.viewedUid)?.name ?? 'Select a team member';
+  }
+
+  get viewedMemberInitials(): string {
+    return initialsFor(this.viewedMemberName);
+  }
+
+  toggleMemberPicker(): void {
+    this.memberPickerOpen = !this.memberPickerOpen;
+  }
+
+  closeMemberPicker(): void {
+    this.memberPickerOpen = false;
+  }
+
+  selectMember(uid: string): void {
+    this.selectedUid = uid;
+    this.memberPickerOpen = false;
+  }
+
+  initials(name: string): string {
+    return initialsFor(name);
   }
 
   get calendarMarkers(): CalendarMarker[] {
@@ -173,8 +219,15 @@ export class AttendanceComponent implements OnDestroy {
       formTitle: 'Add holiday',
       emptyTitle: 'No holidays added yet',
       emptyDescription: 'Add company holidays so they never count as absences.',
+      collapsible: true,
       fields: [
-        { name: 'date', label: 'Date', type: 'date', required: true },
+        { name: 'date', label: 'Start date', type: 'date', required: true },
+        {
+          name: 'endDate',
+          label: 'End date',
+          type: 'date',
+          hint: 'Leave blank for a single day, or set an end date to add every day in between as a holiday (e.g. a Diwali break). Only used when adding a new holiday, not when editing one.',
+        },
         { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Diwali' },
       ],
       stats: [],
@@ -196,14 +249,28 @@ export class AttendanceComponent implements OnDestroy {
   }
 
   async saveHoliday(event: FeatureSaveEvent): Promise<void> {
-    const payload: HolidayInput = {
-      date: textValue(event.value, 'date'),
-      name: textValue(event.value, 'name'),
-    };
+    const name = textValue(event.value, 'name');
+    const startDate = textValue(event.value, 'date');
+
+    if (event.id) {
+      const payload: HolidayInput = { date: startDate, name };
+      await this.runMutation(() => this.holidayService.update(event.id!, payload), 'Holiday updated');
+      return;
+    }
+
+    const endDate = textValue(event.value, 'endDate');
+    const dates = expandDateRange(startDate, endDate);
+    const existingDates = new Set(this.holidays().map((holiday) => holiday.date));
+    const toCreate = dates.filter((date) => !existingDates.has(date)).map((date) => ({ date, name }));
+
+    if (!toCreate.length) {
+      this.showToast('Those dates are already added.');
+      return;
+    }
 
     await this.runMutation(
-      () => event.id ? this.holidayService.update(event.id, payload) : this.holidayService.create(payload),
-      event.id ? 'Holiday updated' : 'Holiday added',
+      () => this.holidayService.bulkCreate(toCreate),
+      `Added ${toCreate.length} holiday${toCreate.length === 1 ? '' : 's'}`,
     );
   }
 
@@ -227,7 +294,9 @@ export class AttendanceComponent implements OnDestroy {
 
   async loadStandardHolidays(): Promise<void> {
     const existingDates = new Set(this.holidays().map((holiday) => holiday.date));
-    const candidates = holidaysForYear(this.holidayLoadYear).filter((item) => !existingDates.has(item.date));
+    const candidates = holidaysForYear(this.holidayLoadYear, this.holidayRegion).filter(
+      (item) => !existingDates.has(item.date),
+    );
 
     if (!candidates.length) {
       this.showToast(`${this.holidayLoadYear}'s holidays are already added.`);
@@ -239,7 +308,8 @@ export class AttendanceComponent implements OnDestroy {
 
     try {
       const added = await this.holidayService.bulkCreate(candidates);
-      this.showToast(`Added ${added} holiday${added === 1 ? '' : 's'} for ${this.holidayLoadYear}.`);
+      const regionLabel = this.holidayRegion ? ` (${REGION_LABELS[this.holidayRegion]})` : '';
+      this.showToast(`Added ${added} holiday${added === 1 ? '' : 's'} for ${this.holidayLoadYear}${regionLabel}.`);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to add holidays.';
     } finally {
@@ -323,5 +393,45 @@ function isWeekend(dateIso: string): boolean {
 
   const day = date.getDay();
   return day === 0 || day === 6;
+}
+
+const MAX_HOLIDAY_RANGE_DAYS = 45;
+
+/** Every ISO date from start to end inclusive, capped as a safety valve against a typo'd end date. */
+function expandDateRange(start: string, end: string): string[] {
+  const startDate = parseIsoDate(start);
+
+  if (!startDate) {
+    return [];
+  }
+
+  const endDate = end ? parseIsoDate(end) : null;
+
+  if (!endDate || endDate <= startDate) {
+    return [start];
+  }
+
+  const dates: string[] = [];
+  const cursor = new Date(startDate);
+
+  while (toIsoDate(cursor) <= toIsoDate(endDate) && dates.length < MAX_HOLIDAY_RANGE_DAYS) {
+    dates.push(toIsoDate(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+}
+
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  if (!parts.length) {
+    return '?';
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
