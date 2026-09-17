@@ -5,6 +5,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 
 import { AttendanceRecord, AttendanceToken, Holiday, HolidayInput } from '../../core/models/attendance.model';
 import { CompanyMember } from '../../core/models/company.model';
+import { INDIA_PUBLIC_HOLIDAYS, holidaysForYear } from '../../core/data/india-holidays.data';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { AttendanceTokenService } from '../../core/services/attendance-token.service';
@@ -48,11 +49,8 @@ export class AttendanceComponent implements OnDestroy {
   checkInError = '';
   selectedUid = '';
 
-  showBulkImport = false;
-  bulkText = '';
-  bulkResultMessage = '';
-  isBulkImporting = false;
-  nationalHolidayYear = new Date().getFullYear();
+  holidayLoadYear = new Date().getFullYear();
+  isLoadingHolidays = false;
 
   isBusy = false;
   errorMessage = '';
@@ -218,74 +216,34 @@ export class AttendanceComponent implements OnDestroy {
     this.showToast('Live sync is active. Attendance updates automatically.');
   }
 
-  get nationalHolidayYears(): number[] {
+  get holidayLoadYears(): number[] {
     const current = new Date().getFullYear();
-    return [current, current + 1];
+    return [current - 1, current, current + 1];
   }
 
-  async addNationalHolidays(): Promise<void> {
+  get holidayLoadYearHasCuratedList(): boolean {
+    return this.holidayLoadYear in INDIA_PUBLIC_HOLIDAYS;
+  }
+
+  async loadStandardHolidays(): Promise<void> {
     const existingDates = new Set(this.holidays().map((holiday) => holiday.date));
-    const candidates = nationalHolidaysForYear(this.nationalHolidayYear).filter(
-      (item) => !existingDates.has(item.date),
-    );
+    const candidates = holidaysForYear(this.holidayLoadYear).filter((item) => !existingDates.has(item.date));
 
     if (!candidates.length) {
-      this.showToast('Those national holidays are already added.');
+      this.showToast(`${this.holidayLoadYear}'s holidays are already added.`);
       return;
     }
 
-    this.isBusy = true;
+    this.isLoadingHolidays = true;
     this.errorMessage = '';
 
     try {
       const added = await this.holidayService.bulkCreate(candidates);
-      this.showToast(`Added ${added} national holiday${added === 1 ? '' : 's'}.`);
+      this.showToast(`Added ${added} holiday${added === 1 ? '' : 's'} for ${this.holidayLoadYear}.`);
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Unable to add national holidays.';
+      this.errorMessage = error instanceof Error ? error.message : 'Unable to add holidays.';
     } finally {
-      this.isBusy = false;
-    }
-  }
-
-  toggleBulkImport(): void {
-    this.showBulkImport = !this.showBulkImport;
-    this.bulkResultMessage = '';
-  }
-
-  async importBulkHolidays(): Promise<void> {
-    const parsed = parseBulkHolidayText(this.bulkText);
-
-    if (!parsed.items.length) {
-      this.bulkResultMessage = 'No valid lines found. Use one holiday per line: YYYY-MM-DD, Name';
-      return;
-    }
-
-    const existingDates = new Set(this.holidays().map((holiday) => holiday.date));
-    const toCreate = parsed.items.filter((item) => !existingDates.has(item.date));
-    const duplicateCount = parsed.items.length - toCreate.length;
-
-    this.isBulkImporting = true;
-    this.errorMessage = '';
-
-    try {
-      const added = await this.holidayService.bulkCreate(toCreate);
-      const parts = [`Added ${added} holiday${added === 1 ? '' : 's'}`];
-
-      if (duplicateCount) {
-        parts.push(`skipped ${duplicateCount} already added`);
-      }
-
-      if (parsed.invalidLines.length) {
-        parts.push(`skipped ${parsed.invalidLines.length} unreadable line${parsed.invalidLines.length === 1 ? '' : 's'}`);
-      }
-
-      this.bulkResultMessage = `${parts.join(', ')}.`;
-      this.bulkText = '';
-      this.showToast('Holidays imported.');
-    } catch (error) {
-      this.bulkResultMessage = error instanceof Error ? error.message : 'Unable to import holidays.';
-    } finally {
-      this.isBulkImporting = false;
+      this.isLoadingHolidays = false;
     }
   }
 
@@ -367,66 +325,3 @@ function isWeekend(dateIso: string): boolean {
   return day === 0 || day === 6;
 }
 
-/**
- * India's only nationwide, fixed-date public holidays. Festival holidays (Diwali, Holi,
- * Eid, etc.) follow lunar/regional calendars that shift every year and vary by state, so
- * they can't be safely auto-generated — those go through the bulk-paste importer instead.
- */
-function nationalHolidaysForYear(year: number): { date: string; name: string }[] {
-  return [
-    { date: `${year}-01-26`, name: 'Republic Day' },
-    { date: `${year}-08-15`, name: 'Independence Day' },
-    { date: `${year}-10-02`, name: 'Gandhi Jayanti' },
-  ];
-}
-
-function parseBulkHolidayText(text: string): { items: HolidayInput[]; invalidLines: string[] } {
-  const items: HolidayInput[] = [];
-  const invalidLines: string[] = [];
-  const seen = new Set<string>();
-
-  for (const rawLine of text.split('\n')) {
-    const line = rawLine.trim();
-
-    if (!line) {
-      continue;
-    }
-
-    const separatorIndex = line.search(/[,\t]|\s{2,}/);
-    const datePart = (separatorIndex === -1 ? line : line.slice(0, separatorIndex)).trim();
-    const namePart = (separatorIndex === -1 ? '' : line.slice(separatorIndex + 1)).trim();
-    const date = normalizeHolidayDate(datePart);
-
-    if (!date || !namePart) {
-      invalidLines.push(rawLine);
-      continue;
-    }
-
-    const key = `${date}|${namePart}`;
-
-    if (seen.has(key)) {
-      continue;
-    }
-
-    seen.add(key);
-    items.push({ date, name: namePart });
-  }
-
-  return { items, invalidLines };
-}
-
-function normalizeHolidayDate(value: string): string | null {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return parseIsoDate(value) ? value : null;
-  }
-
-  const slashMatch = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-
-  if (slashMatch) {
-    const [, day, month, year] = slashMatch;
-    const iso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    return parseIsoDate(iso) ? iso : null;
-  }
-
-  return null;
-}

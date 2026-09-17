@@ -130,75 +130,39 @@
 
   @if (canManage()) {
     <section class="mt-4 ui-panel rounded-lg p-5">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Add holidays faster</p>
-          <h3 class="mt-1 text-lg font-semibold">Bulk-add holidays</h3>
-          <p class="mt-1 max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400">
-            There's no reliable free source for India's full festival calendar (Diwali, Holi, Eid and regional
-            holidays shift every year and by state), so it can't be auto-fetched accurately. Republic Day,
-            Independence Day and Gandhi Jayanti are fixed every year — add those in one click below. For the rest,
-            paste a list and import them all at once instead of adding them one by one.
-          </p>
-        </div>
-      </div>
+      <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Add holidays faster</p>
+      <h3 class="mt-1 text-lg font-semibold">Load India's public holidays</h3>
+      <p class="mt-1 max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+        Loads straight from a built-in national holiday calendar — no typing them in one by one. Republic Day,
+        Independence Day, Gandhi Jayanti, Christmas and Good Friday are always exact; festival dates (Holi, Eid,
+        Diwali, etc.) follow the lunar calendar and are best-known values, so double-check them against your
+        state's official list before relying on this for payroll.
+      </p>
 
       <div class="mt-4 flex flex-wrap items-center gap-2">
         <select
-          [(ngModel)]="nationalHolidayYear"
+          [(ngModel)]="holidayLoadYear"
           class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none dark:border-slate-800 dark:bg-slate-900"
         >
-          @for (year of nationalHolidayYears; track year) {
+          @for (year of holidayLoadYears; track year) {
             <option [ngValue]="year">{{ year }}</option>
           }
         </select>
         <button
           type="button"
           class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
-          [disabled]="isBusy"
-          (click)="addNationalHolidays()"
+          [disabled]="isLoadingHolidays"
+          (click)="loadStandardHolidays()"
         >
           <svg lucideIcon="calendar-clock" class="size-3.5"></svg>
-          Add national holidays for {{ nationalHolidayYear }}
+          {{ isLoadingHolidays ? 'Loading…' : 'Load holidays for ' + holidayLoadYear }}
         </button>
-        <button
-          type="button"
-          class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
-          (click)="toggleBulkImport()"
-        >
-          <svg lucideIcon="rotate-ccw" class="size-3.5"></svg>
-          {{ showBulkImport ? 'Hide bulk import' : 'Bulk import list' }}
-        </button>
+        @if (!holidayLoadYearHasCuratedList) {
+          <span class="text-xs text-slate-400 dark:text-slate-500">
+            Only fixed-date holidays are known for {{ holidayLoadYear }} — add festivals manually below once published.
+          </span>
+        }
       </div>
-
-      @if (showBulkImport) {
-        <div class="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <label for="bulk-holiday-text" class="text-xs font-medium text-slate-500 dark:text-slate-400">
-            One holiday per line: <code class="rounded bg-slate-100 px-1 py-0.5 dark:bg-slate-800">YYYY-MM-DD, Name</code>
-          </label>
-          <textarea
-            id="bulk-holiday-text"
-            name="bulkHolidayText"
-            [(ngModel)]="bulkText"
-            rows="5"
-            placeholder="2026-01-26, Republic Day&#10;2026-03-04, Holi&#10;2026-10-20, Diwali"
-            class="mt-2 w-full rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900"
-          ></textarea>
-          <div class="mt-2 flex items-center gap-3">
-            <button
-              type="button"
-              class="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-              [disabled]="isBulkImporting || !bulkText.trim()"
-              (click)="importBulkHolidays()"
-            >
-              {{ isBulkImporting ? 'Importing…' : 'Import holidays' }}
-            </button>
-            @if (bulkResultMessage) {
-              <p class="text-xs font-medium text-slate-600 dark:text-slate-300">{{ bulkResultMessage }}</p>
-            }
-          </div>
-        </div>
-      }
     </section>
 
     <section class="mt-4">
