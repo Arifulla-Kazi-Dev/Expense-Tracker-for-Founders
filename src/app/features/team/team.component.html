@@ -217,9 +217,14 @@
                     <svg lucideIcon="file-text" class="size-3.5"></svg>
                     Copy link
                   </button>
-                  <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900" (click)="openWhatsApp(invite)">
+                  <button
+                    type="button"
+                    class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:hover:bg-slate-900"
+                    [disabled]="isWhatsAppOpening(invite)"
+                    (click)="openWhatsApp(invite)"
+                  >
                     <svg lucideIcon="upload" class="size-3.5"></svg>
-                    WhatsApp
+                    {{ isWhatsAppOpening(invite) ? 'Opening…' : 'WhatsApp' }}
                   </button>
                   @if (canInvite()) {
                     <button type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 dark:border-rose-400/20 dark:text-rose-200 dark:hover:bg-rose-400/10" (click)="revokeInvite(invite)">

@@ -66,6 +66,7 @@ export class TeamComponent implements OnDestroy {
   jobTitlePickerMemberUid = '';
   pendingConfirm: TeamConfirmAction | null = null;
   toastMessage = '';
+  private readonly recentWhatsAppOpens = new Set<string>();
 
   ngOnDestroy(): void {
     if (this.toastTimer) {
@@ -240,10 +241,21 @@ export class TeamComponent implements OnDestroy {
     this.showToast(link);
   }
 
+  isWhatsAppOpening(invite: CompanyInvite): boolean {
+    return this.recentWhatsAppOpens.has(invite.inviteId);
+  }
+
   openWhatsApp(invite: CompanyInvite): void {
-    if (this.isBrowser) {
-      window.open(this.whatsAppShareUrl(invite), '_blank', 'noopener,noreferrer');
+    // Guards against a rapid double-tap opening two WhatsApp compose windows —
+    // on some WhatsApp clients the second one appends to the still-unsent first
+    // draft instead of replacing it, mangling both messages together.
+    if (!this.isBrowser || this.recentWhatsAppOpens.has(invite.inviteId)) {
+      return;
     }
+
+    this.recentWhatsAppOpens.add(invite.inviteId);
+    window.open(this.whatsAppShareUrl(invite), '_blank', 'noopener,noreferrer');
+    setTimeout(() => this.recentWhatsAppOpens.delete(invite.inviteId), 2000);
   }
 
   async revokeInvite(invite: CompanyInvite): Promise<void> {
