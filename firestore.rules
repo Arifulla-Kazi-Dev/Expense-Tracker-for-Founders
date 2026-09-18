@@ -33,9 +33,12 @@ service cloud.firestore {
     }
 
     function permissionOverride(companyId, permission) {
-      return memberData(companyId).keys().hasAny(['permissionOverrides'])
-        ? memberData(companyId).permissionOverrides[permission]
-        : null;
+      // .get(key, default) is required here — bracket access (map[key]) throws
+      // an "undefined property" evaluation error when the key is absent, which
+      // silently denies the whole request. Most members' permissionOverrides
+      // start as an empty map (see auth.service.ts's invite-acceptance path),
+      // so almost every permission lookup would hit that missing-key case.
+      return memberData(companyId).get('permissionOverrides', {}).get(permission, null);
     }
 
     function hasRole(companyId, roles) {
