@@ -145,7 +145,7 @@ export class InviteService {
   }
 
   whatsAppShareUrl(invite: CompanyInvite): string {
-    const message = `Hi, you have been invited to join ${invite.companyName} on Co-Founder as ${roleDisplayName(invite.role)}. Use this link to sign up: ${this.inviteLink(invite.token)}`;
+    const message = `Hi, you have been invited to join ${invite.companyName} on CO-Founder as ${roleDisplayName(invite.role)}. Use this link to sign up: ${this.inviteLink(invite.token)}`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }
 

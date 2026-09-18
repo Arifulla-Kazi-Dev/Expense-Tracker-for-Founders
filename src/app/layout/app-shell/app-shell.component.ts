@@ -25,7 +25,6 @@ import { currencyINR } from '../../core/utils/finance-formatters';
   styleUrl: './app-shell.component.css',
 })
 export class AppShellComponent implements OnDestroy {
-  readonly title = 'Startup Expense OS';
   readonly navigationItems = navigationItems;
   readonly mobileNavigationItems = mobileNavigationItems;
   readonly currentDateLabel = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date());

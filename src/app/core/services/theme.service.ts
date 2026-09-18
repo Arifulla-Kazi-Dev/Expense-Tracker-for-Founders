@@ -3,7 +3,7 @@ import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 
 export type ThemeMode = 'light' | 'dark';
 
-const THEME_STORAGE_KEY = 'expense-tracker-theme';
+const THEME_STORAGE_KEY = 'co-founder-theme';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {

@@ -1,4 +1,4 @@
-# Expense Tracker for Founders
+# CO-Founder
 
 Founder-focused finance OS for tracking funding, expenses, salaries, startup costs, recurring costs, reports, and founder notes.
 
@@ -31,7 +31,7 @@ npm run build
 npm run build:github
 ```
 
-The GitHub Pages workflow publishes `dist/expense-tracker-founders/browser`, promotes Angular's `index.csr.html` browser shell to `index.html`, and copies it to `404.html` so Angular routes work on refresh.
+The GitHub Pages workflow publishes `dist/co-founder/browser`, promotes Angular's `index.csr.html` browser shell to `index.html`, and copies it to `404.html` so Angular routes work on refresh.
 
 Live URL after Pages deployment:
 

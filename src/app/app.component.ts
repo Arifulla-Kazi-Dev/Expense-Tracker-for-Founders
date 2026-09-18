@@ -11,7 +11,7 @@ import { ThemeService } from './core/services/theme.service';
   styleUrl: './app.component.css',
 })
 export class AppComponent {
-  readonly title = 'Startup Expense OS';
+  readonly title = 'CO-Founder';
   private readonly themeService = inject(ThemeService);
 
   constructor() {

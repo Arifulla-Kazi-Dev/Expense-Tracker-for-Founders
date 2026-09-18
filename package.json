@@ -1,5 +1,5 @@
 {
-  "name": "expense-tracker-founders",
+  "name": "co-founder",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -8,7 +8,7 @@
     "build:github": "ng build --configuration production --base-href /Expense-Tracker-for-Founders/",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:expense-tracker-founders": "node dist/expense-tracker-founders/server/server.mjs"
+    "serve:ssr:co-founder": "node dist/co-founder/server/server.mjs"
   },
   "private": true,
   "dependencies": {

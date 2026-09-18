@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "expense-tracker-founders": {
+    "co-founder": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/expense-tracker-founders",
+            "outputPath": "dist/co-founder",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -87,10 +87,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "expense-tracker-founders:build:production"
+              "buildTarget": "co-founder:build:production"
             },
             "development": {
-              "buildTarget": "expense-tracker-founders:build:development"
+              "buildTarget": "co-founder:build:development"
             }
           },
           "defaultConfiguration": "development"

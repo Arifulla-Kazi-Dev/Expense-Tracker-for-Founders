@@ -42,12 +42,12 @@ jobs:
 
       - name: Prepare static Pages shell
         run: |
-          APP_DIR="dist/expense-tracker-founders/browser"
+          APP_DIR="dist/co-founder/browser"
           cp "$APP_DIR/index.csr.html" "$APP_DIR/index.html"
           cp "$APP_DIR/index.html" "$APP_DIR/404.html"
           node <<'NODE'
           const fs = require('fs');
-          const path = 'dist/expense-tracker-founders/browser';
+          const path = 'dist/co-founder/browser';
           const cssFile = fs.readdirSync(path).find((file) => /^styles-.+\.css$/.test(file));
 
           if (!cssFile) {
@@ -67,7 +67,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: dist/expense-tracker-founders/browser
+          path: dist/co-founder/browser
 
   deploy:
     environment:
