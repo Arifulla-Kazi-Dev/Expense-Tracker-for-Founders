@@ -32,7 +32,6 @@ export class AppShellComponent implements OnDestroy {
   globalSearch = '';
   isCompanySwitcherOpen = false;
   isMobileMenuOpen = false;
-  isRetryingProfileSync = false;
   isLoggingOut = false;
   isSwitchingCompany = false;
   isSyncing = false;
@@ -56,7 +55,6 @@ export class AppShellComponent implements OnDestroy {
   );
   readonly user = toSignal(this.authService.user$, { initialValue: this.authService.currentUser });
   readonly summary = toSignal(this.dashboardService.summary$, { initialValue: emptyDashboardSummary });
-  readonly profileSyncError = toSignal(this.authService.profileSyncError$, { initialValue: '' });
   readonly memberships = toSignal(this.permissionService.memberships$, { initialValue: [] as CompanyMembership[] });
   readonly activeCompanyId = toSignal(this.permissionService.activeCompanyId$, { initialValue: null });
   readonly activeMembership = toSignal(this.permissionService.activeMembership$, { initialValue: null });
@@ -256,27 +254,6 @@ export class AppShellComponent implements OnDestroy {
       this.showToast(error instanceof Error ? error.message : 'Unable to switch company');
     } finally {
       this.isSwitchingCompany = false;
-    }
-  }
-
-  dismissProfileSyncError(): void {
-    this.authService.clearProfileSyncError();
-  }
-
-  async retryProfileSync(): Promise<void> {
-    if (this.isRetryingProfileSync) {
-      return;
-    }
-
-    this.isRetryingProfileSync = true;
-
-    try {
-      await this.authService.retryCurrentUserProfileSync();
-      this.showToast('Profile synced to Cloud');
-    } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Unable to sync profile');
-    } finally {
-      this.isRetryingProfileSync = false;
     }
   }
 

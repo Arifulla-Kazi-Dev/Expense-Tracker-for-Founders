@@ -361,22 +361,6 @@
       </div>
     </header>
 
-    @if (profileSyncError()) {
-      <div class="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100 sm:px-6 lg:px-8">
-        <div class="flex items-start justify-between gap-4">
-          <span>{{ profileSyncError() }}</span>
-          <div class="flex shrink-0 items-center gap-2">
-            <button type="button" class="rounded-md px-2 py-1 text-xs font-semibold transition hover:bg-amber-100 dark:hover:bg-amber-400/10" [disabled]="isRetryingProfileSync" (click)="retryProfileSync()">
-              Retry
-            </button>
-            <button type="button" class="rounded-md px-2 py-1 text-xs font-semibold transition hover:bg-amber-100 dark:hover:bg-amber-400/10" (click)="dismissProfileSyncError()">
-              Dismiss
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-
     <router-outlet />
   </div>
 

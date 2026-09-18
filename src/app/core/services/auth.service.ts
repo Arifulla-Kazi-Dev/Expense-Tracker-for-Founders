@@ -455,8 +455,8 @@ export class AuthService {
         return;
       }
 
-      // Auth should not strand the user if profile sync is temporarily unavailable.
-      // The shell shows profileSyncError$ and any later cloud write will retry against the same UID.
+      // Auth should not strand the user if profile sync is temporarily unavailable —
+      // any later cloud write will retry against the same UID.
     }
   }
 
