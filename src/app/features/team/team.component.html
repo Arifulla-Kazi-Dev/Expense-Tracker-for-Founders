@@ -147,14 +147,35 @@
           </div>
 
           @if (showInviteJobTitleField()) {
-            <label class="grid gap-2 text-sm font-medium">
-              Job title
-              <select formControlName="jobTitle" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900">
+            <div class="grid gap-2">
+              <p class="text-sm font-medium">Job title</p>
+              <div class="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950 sm:grid-cols-2" role="radiogroup" aria-label="Job title">
                 @for (title of jobTitles; track title) {
-                  <option [value]="title">{{ title }}</option>
+                  <button
+                    type="button"
+                    class="flex min-h-12 items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition"
+                    [ngClass]="isInviteJobTitleSelected(title)
+                      ? 'border-violet-300 bg-violet-50 text-violet-950 ring-2 ring-violet-500/20 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800'"
+                    [attr.aria-pressed]="isInviteJobTitleSelected(title)"
+                    (click)="selectInviteJobTitle(title)"
+                  >
+                    <span class="flex min-w-0 items-center gap-2">
+                      <span class="flex size-8 shrink-0 items-center justify-center rounded-md ring-1" [ngClass]="jobTitleToneClass(title)">
+                        <svg [lucideIcon]="jobTitleIcon(title)" class="size-4"></svg>
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block truncate">{{ title }}</span>
+                        <span class="mt-0.5 block truncate text-xs font-medium opacity-70">{{ jobTitleDetail(title) }}</span>
+                      </span>
+                    </span>
+                    @if (isInviteJobTitleSelected(title)) {
+                      <svg lucideIcon="check-circle-2" class="size-4 shrink-0"></svg>
+                    }
+                  </button>
                 }
-              </select>
-            </label>
+              </div>
+            </div>
           }
 
           <label class="grid gap-2 text-sm font-medium">
@@ -326,8 +347,8 @@
                             (click)="toggleJobTitlePicker(member)"
                           >
                             <span class="flex min-w-0 items-center gap-3">
-                              <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
-                                <svg lucideIcon="briefcase" class="size-4"></svg>
+                              <span class="flex size-9 shrink-0 items-center justify-center rounded-lg ring-1" [ngClass]="member.jobTitle ? jobTitleToneClass(member.jobTitle) : 'bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800'">
+                                <svg [lucideIcon]="member.jobTitle ? jobTitleIcon(member.jobTitle) : 'briefcase'" class="size-4"></svg>
                               </span>
                               <span class="min-w-0">
                                 <span class="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Job title</span>
@@ -338,11 +359,11 @@
                           </button>
 
                           @if (isJobTitlePickerOpen(member)) {
-                            <div class="grid gap-1 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-900/70" role="listbox" aria-label="Change job title">
+                            <div class="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-900/70 sm:grid-cols-2" role="listbox" aria-label="Change job title">
                               @for (title of jobTitles; track title) {
                                 <button
                                   type="button"
-                                  class="flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60"
+                                  class="flex min-h-12 items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60"
                                   [ngClass]="title === member.jobTitle
                                     ? 'border-violet-300 bg-violet-50 text-slate-950 ring-2 ring-violet-500/15 dark:border-violet-400/40 dark:bg-violet-400/10 dark:text-white'
                                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900'"
@@ -351,7 +372,12 @@
                                   [attr.aria-selected]="title === member.jobTitle"
                                   (click)="selectMemberJobTitle(member, title)"
                                 >
-                                  {{ title }}
+                                  <span class="flex min-w-0 items-center gap-2">
+                                    <span class="flex size-8 shrink-0 items-center justify-center rounded-md ring-1" [ngClass]="jobTitleToneClass(title)">
+                                      <svg [lucideIcon]="jobTitleIcon(title)" class="size-4"></svg>
+                                    </span>
+                                    <span class="min-w-0 truncate">{{ title }}</span>
+                                  </span>
                                   @if (title === member.jobTitle) {
                                     <svg lucideIcon="check-circle-2" class="size-4 shrink-0 text-violet-600 dark:text-violet-300"></svg>
                                   }

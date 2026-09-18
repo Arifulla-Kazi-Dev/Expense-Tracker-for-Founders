@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { CompanyInvite, CompanyMember } from '../../core/models/company.model';
+import { Tone } from '../../core/models/dashboard.models';
 import {
   ADMIN_PERMISSIONS,
   INVITABLE_ROLES,
@@ -23,6 +24,7 @@ import { InviteService } from '../../core/services/invite.service';
 import { MemberService } from '../../core/services/member.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { tonePanelClass } from '../../core/utils/ui-classnames';
 
 @Component({
   selector: 'app-team',
@@ -126,6 +128,27 @@ export class TeamComponent implements OnDestroy {
 
   showInviteJobTitleField(): boolean {
     return this.inviteForm.controls.role.value === 'team-member';
+  }
+
+  selectInviteJobTitle(title: string): void {
+    this.inviteForm.controls.jobTitle.setValue(title);
+    this.inviteForm.controls.jobTitle.markAsDirty();
+  }
+
+  isInviteJobTitleSelected(title: string): boolean {
+    return this.inviteForm.controls.jobTitle.value === title;
+  }
+
+  jobTitleIcon(title: string): string {
+    return JOB_TITLE_META[title]?.icon ?? 'briefcase';
+  }
+
+  jobTitleDetail(title: string): string {
+    return JOB_TITLE_META[title]?.detail ?? '';
+  }
+
+  jobTitleToneClass(title: string): string {
+    return tonePanelClass(JOB_TITLE_META[title]?.tone ?? 'slate');
   }
 
   roleIcon(role: UserRole): string {
@@ -629,3 +652,19 @@ interface PermissionGroup {
   icon: string;
   permissions: Permission[];
 }
+
+const JOB_TITLE_META: Record<string, { icon: string; tone: Tone; detail: string }> = {
+  'Software Developer': { icon: 'code', tone: 'sky', detail: 'Builds and ships product features' },
+  'QA Tester': { icon: 'bug', tone: 'sky', detail: 'Tests releases and catches bugs early' },
+  'UI/UX Designer': { icon: 'palette', tone: 'rose', detail: 'Designs interfaces and user flows' },
+  'Product Manager': { icon: 'compass', tone: 'amber', detail: 'Owns roadmap and feature priorities' },
+  'DevOps Engineer': { icon: 'server', tone: 'sky', detail: 'Manages infra, deploys and uptime' },
+  'Data Analyst': { icon: 'bar-chart-3', tone: 'sky', detail: 'Turns data into actionable insight' },
+  'Marketing Executive': { icon: 'megaphone', tone: 'amber', detail: 'Runs campaigns and growth pushes' },
+  'Sales Executive': { icon: 'handshake', tone: 'amber', detail: 'Closes deals, manages client relationships' },
+  'Customer Support': { icon: 'headphones', tone: 'emerald', detail: 'Helps customers, resolves issues' },
+  'Content Writer': { icon: 'pen-line', tone: 'rose', detail: 'Writes copy, docs and content' },
+  'Business Analyst': { icon: 'line-chart', tone: 'amber', detail: 'Bridges business needs and execution' },
+  Intern: { icon: 'graduation-cap', tone: 'slate', detail: 'Learning and contributing across the team' },
+  Other: { icon: 'layers-3', tone: 'slate', detail: 'A role outside the usual list' },
+};
