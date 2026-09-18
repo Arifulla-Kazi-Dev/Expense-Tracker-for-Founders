@@ -26,6 +26,8 @@ export interface CompanyMember {
   email: string | null;
   photoURL: string | null;
   role: UserRole;
+  /** Job title shown instead of the generic role label — only meaningful when role is 'team-member'. */
+  jobTitle?: string;
   status: CompanyMemberStatus;
   invitedBy: string;
   joinedAt: FirestoreDate;
@@ -45,6 +47,7 @@ export interface CompanyMembership {
   email: string | null;
   photoURL: string | null;
   role: UserRole;
+  jobTitle?: string;
   status: CompanyMemberStatus;
   invitedBy: string;
   joinedAt: FirestoreDate;
@@ -61,6 +64,7 @@ export interface CompanyInvite {
   companyName: string;
   token: string;
   role: UserRole;
+  jobTitle?: string;
   invitedEmail?: string;
   invitedPhone?: string;
   invitedByUid: string;
@@ -74,6 +78,7 @@ export interface CompanyInvite {
 
 export interface CreateInviteInput {
   role: UserRole;
+  jobTitle?: string;
   invitedEmail?: string;
   invitedPhone?: string;
   expiryDays: number;

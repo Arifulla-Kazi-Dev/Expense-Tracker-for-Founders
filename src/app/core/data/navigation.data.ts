@@ -9,7 +9,7 @@ export const navigationItems: NavigationItem[] = [
   { label: 'Startup Costs', icon: 'building-2', route: '/startup-costs' },
   { label: 'Recurring Costs', icon: 'repeat-2', route: '/recurring-costs' },
   { label: 'Compliance', icon: 'shield-check', route: '/compliance' },
-  { label: 'Attendance', icon: 'users', route: '/attendance' },
+  { label: 'Attendance', icon: 'users', route: '/attendance', permission: 'viewAttendance' },
   { label: 'Reports', icon: 'bar-chart-3', route: '/reports' },
   { label: 'Workspace Notes', icon: 'notebook-text', route: '/founder-notes' },
   { label: 'Team', icon: 'users', route: '/team' },

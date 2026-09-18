@@ -8,7 +8,7 @@ import { AttendanceRecord, AttendanceToken, Holiday, HolidayInput } from '../../
 import { CompanyMember } from '../../core/models/company.model';
 import { HolidayRegion, INDIA_PUBLIC_HOLIDAYS, REGION_LABELS, holidaysForYear } from '../../core/data/india-holidays.data';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
-import { UserRole } from '../../core/models/role.model';
+import { UserRole, roleDisplayName } from '../../core/models/role.model';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { AttendanceTokenService } from '../../core/services/attendance-token.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -89,8 +89,9 @@ export class AttendanceComponent implements OnDestroy {
     return this.authService.currentUser?.uid ?? null;
   }
 
+  /** Only roles that can access attendance at all are worth tracking/showing here. */
   get activeMembers(): CompanyMember[] {
-    return this.members().filter((member) => member.status === 'active');
+    return this.members().filter((member) => member.status === 'active' && canAccessAttendance(member.role));
   }
 
   /** Founders/co-founders don't check in, but are never treated as absent either — always shown Present. */
@@ -105,6 +106,17 @@ export class AttendanceComponent implements OnDestroy {
     }
 
     return this.members().find((member) => member.uid === uid)?.role ?? null;
+  }
+
+  /** Role label shown in the picker — a team member's job title stands in for the generic "Team Member" label when set. */
+  roleOrJobTitleFor(uid: string): string {
+    const member = this.members().find((item) => item.uid === uid);
+
+    if (member?.role === 'team-member' && member.jobTitle) {
+      return member.jobTitle;
+    }
+
+    return roleDisplayName(member?.role ?? this.roleForUid(uid));
   }
 
   get today(): string {
@@ -439,6 +451,10 @@ export class AttendanceComponent implements OnDestroy {
       this.toastMessage = '';
     }, 2400);
   }
+}
+
+function canAccessAttendance(role: UserRole): boolean {
+  return role === 'founder' || role === 'cofounder' || role === 'hr-manager' || role === 'team-member';
 }
 
 function isWeekend(dateIso: string): boolean {

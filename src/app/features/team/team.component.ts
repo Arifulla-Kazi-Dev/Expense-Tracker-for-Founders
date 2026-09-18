@@ -12,6 +12,7 @@ import {
   PermissionOverrides,
   ROLE_OPTIONS,
   ROLE_PERMISSIONS,
+  TEAM_MEMBER_JOB_TITLES,
   UserRole,
   effectivePermissions,
   roleDisplayName,
@@ -48,9 +49,11 @@ export class TeamComponent implements OnDestroy {
   readonly permissionRoles = ROLE_OPTIONS;
   readonly permissionItems = PERMISSION_LABELS;
   readonly permissionGroups = PERMISSION_GROUPS;
+  readonly jobTitles = TEAM_MEMBER_JOB_TITLES;
 
   readonly inviteForm = this.formBuilder.nonNullable.group({
     role: ['finance-manager' as UserRole, [Validators.required]],
+    jobTitle: [''],
     expiryDays: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
   });
 
@@ -58,6 +61,7 @@ export class TeamComponent implements OnDestroy {
   expandedMemberUid = '';
   isBusy = false;
   rolePickerMemberUid = '';
+  jobTitlePickerMemberUid = '';
   pendingConfirm: TeamConfirmAction | null = null;
   toastMessage = '';
 
@@ -110,10 +114,18 @@ export class TeamComponent implements OnDestroy {
   selectInviteRole(role: UserRole): void {
     this.inviteForm.controls.role.setValue(role);
     this.inviteForm.controls.role.markAsDirty();
+
+    if (role === 'team-member' && !this.inviteForm.controls.jobTitle.value) {
+      this.inviteForm.controls.jobTitle.setValue(this.jobTitles[0]);
+    }
   }
 
   isInviteRoleSelected(role: UserRole): boolean {
     return this.inviteForm.controls.role.value === role;
+  }
+
+  showInviteJobTitleField(): boolean {
+    return this.inviteForm.controls.role.value === 'team-member';
   }
 
   roleIcon(role: UserRole): string {
@@ -182,6 +194,7 @@ export class TeamComponent implements OnDestroy {
       this.showToast('Invite generated and link copied');
       this.inviteForm.patchValue({
         role: 'finance-manager',
+        jobTitle: '',
         expiryDays: 7,
       });
       this.inviteForm.markAsPristine();
@@ -234,6 +247,7 @@ export class TeamComponent implements OnDestroy {
 
     await this.runAction(() => this.memberService.changeRole(member, role), 'Member role updated');
     this.closeRolePicker();
+    this.closeJobTitlePicker();
   }
 
   toggleRolePicker(member: CompanyMember): void {
@@ -252,11 +266,42 @@ export class TeamComponent implements OnDestroy {
     return this.rolePickerMemberUid === member.uid;
   }
 
+  async selectMemberJobTitle(member: CompanyMember, jobTitle: string): Promise<void> {
+    if (!this.canChangeMember(member) || jobTitle === member.jobTitle) {
+      this.closeJobTitlePicker();
+      return;
+    }
+
+    await this.runAction(() => this.memberService.updateJobTitle(member, jobTitle), 'Job title updated');
+    this.closeJobTitlePicker();
+  }
+
+  toggleJobTitlePicker(member: CompanyMember): void {
+    if (!this.canChangeMember(member) || this.isBusy) {
+      return;
+    }
+
+    this.jobTitlePickerMemberUid = this.jobTitlePickerMemberUid === member.uid ? '' : member.uid;
+  }
+
+  closeJobTitlePicker(): void {
+    this.jobTitlePickerMemberUid = '';
+  }
+
+  isJobTitlePickerOpen(member: CompanyMember): boolean {
+    return this.jobTitlePickerMemberUid === member.uid;
+  }
+
+  memberJobTitleLabel(member: CompanyMember): string {
+    return member.jobTitle || 'No job title set';
+  }
+
   toggleMemberPanel(member: CompanyMember): void {
     this.expandedMemberUid = this.expandedMemberUid === member.uid ? '' : member.uid;
 
     if (this.expandedMemberUid !== member.uid) {
       this.closeRolePicker();
+      this.closeJobTitlePicker();
     }
   }
 

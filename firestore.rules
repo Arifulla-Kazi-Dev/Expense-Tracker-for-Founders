@@ -95,6 +95,10 @@ service cloud.firestore {
       return hasPermission(companyId, 'manageAttendance', ['founder', 'cofounder', 'hr-manager']);
     }
 
+    function canViewAttendance(companyId) {
+      return hasPermission(companyId, 'viewAttendance', ['founder', 'cofounder', 'hr-manager', 'team-member']);
+    }
+
     function isNonNegative(value) {
       return value == null || ((value is int || value is float) && value >= 0);
     }
@@ -396,7 +400,7 @@ service cloud.firestore {
       }
 
       match /holidays/{docId} {
-        allow read: if isCompanyMember(companyId);
+        allow read: if canViewAttendance(companyId);
         allow create, update: if canManageAttendance(companyId);
         allow delete: if canManageAttendance(companyId);
       }
@@ -410,7 +414,7 @@ service cloud.firestore {
       }
 
       match /attendance/{recordId} {
-        allow read: if isCompanyMember(companyId);
+        allow read: if canViewAttendance(companyId);
         // Two ways to create a record: (1) self check-in, verified server-side
         // via get() without ever granting the submitter read access to the
         // real token, or (2) a manager override, marking any employee present
@@ -418,12 +422,12 @@ service cloud.firestore {
         // second create on the same doc ID (uid_date) is rejected outright —
         // one record per person per day; "marking absent" deletes the record
         // instead of writing over it.
-        allow create: if isCompanyMember(companyId)
-          && request.resource.data.date is string
+        allow create: if request.resource.data.date is string
           && (
             canManageAttendance(companyId)
             || (
-              request.resource.data.uid == request.auth.uid
+              canViewAttendance(companyId)
+              && request.resource.data.uid == request.auth.uid
               && request.resource.data.tokenSubmitted ==
                  get(/databases/$(database)/documents/companies/$(companyId)/attendanceTokens/$(request.resource.data.date)).data.token
             )

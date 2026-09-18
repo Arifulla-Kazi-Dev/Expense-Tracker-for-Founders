@@ -23,6 +23,7 @@ export type Permission =
   | 'manageFounderNotes'
   | 'manageCompliance'
   | 'manageAttendance'
+  | 'viewAttendance'
   | 'viewReports'
   | 'exportReports'
   | 'readOnly';
@@ -57,6 +58,23 @@ export const ROLE_OPTIONS: UserRole[] = [
 
 export const INVITABLE_ROLES: UserRole[] = ROLE_OPTIONS.filter((role) => role !== 'founder');
 
+/** Job titles offered for the 'team-member' role — the day-to-day title shown instead of the generic "Team Member" label. */
+export const TEAM_MEMBER_JOB_TITLES: string[] = [
+  'Software Developer',
+  'QA Tester',
+  'UI/UX Designer',
+  'Product Manager',
+  'DevOps Engineer',
+  'Data Analyst',
+  'Marketing Executive',
+  'Sales Executive',
+  'Customer Support',
+  'Content Writer',
+  'Business Analyst',
+  'Intern',
+  'Other',
+];
+
 export const PERMISSIONS: Permission[] = [
   'manageCompany',
   'manageMembers',
@@ -70,6 +88,7 @@ export const PERMISSIONS: Permission[] = [
   'manageFounderNotes',
   'manageCompliance',
   'manageAttendance',
+  'viewAttendance',
   'viewReports',
   'exportReports',
   'readOnly',
@@ -106,9 +125,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<Permission, boolean>> = {
   'hr-manager': permissionSet([
     'manageTeamPayments',
     'manageAttendance',
+    'viewAttendance',
     'viewReports',
   ]),
-  'team-member': permissionSet(['readOnly']),
+  'team-member': permissionSet(['readOnly', 'viewAttendance']),
   mentor: permissionSet(['readOnly', 'viewReports']),
   auditor: permissionSet(['readOnly', 'viewReports']),
   ca: permissionSet(['readOnly', 'viewReports']),

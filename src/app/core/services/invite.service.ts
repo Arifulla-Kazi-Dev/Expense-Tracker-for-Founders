@@ -78,6 +78,7 @@ export class InviteService {
       companyName: company.companyName,
       token,
       role: input.role,
+      jobTitle: input.role === 'team-member' ? cleanOptional(input.jobTitle) : undefined,
       invitedEmail: cleanOptional(input.invitedEmail),
       invitedPhone: cleanOptional(input.invitedPhone),
       invitedByUid: user.uid,
@@ -144,7 +145,7 @@ export class InviteService {
   }
 
   whatsAppShareUrl(invite: CompanyInvite): string {
-    const message = `Hi, you have been invited to join ${invite.companyName} on Startup Expense OS as ${roleDisplayName(invite.role)}. Use this link to sign up: ${this.inviteLink(invite.token)}`;
+    const message = `Hi, you have been invited to join ${invite.companyName} on Co-Founder as ${roleDisplayName(invite.role)}. Use this link to sign up: ${this.inviteLink(invite.token)}`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }
 
@@ -209,6 +210,7 @@ function publicInvitePayload(invite: CompanyInvite, createdAt: unknown): Record<
     companyName: invite.companyName,
     token: invite.token,
     role: invite.role,
+    jobTitle: invite.jobTitle,
     invitedByUid: invite.invitedByUid,
     invitedByName: invite.invitedByName,
     status: invite.status,

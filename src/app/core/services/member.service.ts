@@ -56,6 +56,21 @@ export class MemberService {
     const update = {
       role,
       updatedAt: serverTimestamp(),
+      ...(role !== 'team-member' ? { jobTitle: null } : {}),
+    };
+    const membershipPayload = this.membershipPayload(member, update);
+
+    batch.update(this.memberDoc(member.uid), update);
+    batch.set(this.membershipDoc(member.uid), membershipPayload, { merge: true });
+
+    await batch.commit();
+  }
+
+  async updateJobTitle(member: CompanyMember, jobTitle: string): Promise<void> {
+    const batch = writeBatch(this.firestore);
+    const update = {
+      jobTitle,
+      updatedAt: serverTimestamp(),
     };
     const membershipPayload = this.membershipPayload(member, update);
 
@@ -125,6 +140,7 @@ export class MemberService {
       email: member.email ?? null,
       photoURL: member.photoURL ?? null,
       role: member.role ?? 'team-member',
+      jobTitle: member.jobTitle ?? null,
       status: member.status ?? 'active',
       invitedBy: member.invitedBy ?? '',
       permissionOverrides: member.permissionOverrides ?? {},
@@ -146,6 +162,7 @@ function normalizeMember(uid: string, value: Record<string, unknown>): CompanyMe
     email: (value['email'] as string | null | undefined) ?? null,
     photoURL: (value['photoURL'] as string | null | undefined) ?? null,
     role: normalizeUserRole(value['role']),
+    jobTitle: (value['jobTitle'] as string | null | undefined) ?? undefined,
     status: normalizeStatus(value['status']),
     invitedBy: (value['invitedBy'] as string | undefined) ?? '',
     joinedAt: value['joinedAt'] as CompanyMember['joinedAt'],

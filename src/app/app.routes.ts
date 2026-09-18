@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authChildGuard, authGuard, publicOnlyGuard } from './core/guards/auth.guard';
+import { authChildGuard, authGuard, permissionGuard, publicOnlyGuard } from './core/guards/auth.guard';
 import { AppShellComponent } from './layout/app-shell/app-shell.component';
 
 export const routes: Routes = [
@@ -64,6 +64,7 @@ export const routes: Routes = [
       },
       {
         path: 'attendance',
+        canActivate: [permissionGuard('viewAttendance')],
         loadComponent: () =>
           import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent),
       },

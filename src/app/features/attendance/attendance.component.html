@@ -120,8 +120,8 @@
                     {{ initials(profile()?.name ?? 'Me') }}
                   </span>
                   <span class="min-w-0 flex-1">
-                    <span class="block truncate font-medium text-slate-800 dark:text-slate-100">Me</span>
-                    <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ profile()?.name }}</span>
+                    <span class="block truncate font-medium text-slate-800 dark:text-slate-100">Me ({{ profile()?.name }})</span>
+                    <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ currentUid ? roleOrJobTitleFor(currentUid) : '' }}</span>
                   </span>
                   @if (!selectedUid) {
                     <svg lucideIcon="check" class="size-4 shrink-0 text-violet-600 dark:text-violet-300"></svg>
@@ -140,9 +140,7 @@
                       </span>
                       <span class="min-w-0 flex-1">
                         <span class="block truncate font-medium text-slate-800 dark:text-slate-100">{{ member.name }}</span>
-                        <span class="block truncate text-xs text-slate-500 dark:text-slate-400">
-                          {{ isAlwaysPresentUid(member.uid) ? 'Always present' : (member.email ?? 'Team member') }}
-                        </span>
+                        <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ roleOrJobTitleFor(member.uid) }}</span>
                       </span>
                       @if (selectedUid === member.uid) {
                         <svg lucideIcon="check" class="size-4 shrink-0 text-violet-600 dark:text-violet-300"></svg>
