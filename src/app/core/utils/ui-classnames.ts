@@ -51,12 +51,13 @@ export function softTextClass(tone: Tone): string {
   }
 }
 
-export function badgeClass(status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive' | 'Done' | 'Overdue'): string {
+export function badgeClass(status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive' | 'Done' | 'Overdue' | 'Approved' | 'Rejected'): string {
   switch (status) {
     case 'Paid':
     case 'Active':
     case 'Ready':
     case 'Done':
+    case 'Approved':
       return 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20';
     case 'Partially Paid':
       return 'bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-400/10 dark:text-sky-200 dark:ring-sky-400/20';
@@ -64,6 +65,7 @@ export function badgeClass(status: PaymentStatus | 'Active' | 'Draft' | 'Ready' 
     case 'Inactive':
       return 'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:ring-slate-600';
     case 'Overdue':
+    case 'Rejected':
       return 'bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-400/20';
     default:
       return 'bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20';

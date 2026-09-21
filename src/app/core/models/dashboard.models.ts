@@ -102,7 +102,7 @@ export interface FeaturePageRow {
   id?: string;
   title: string;
   meta: string;
-  status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive' | 'Done' | 'Overdue';
+  status: PaymentStatus | 'Active' | 'Draft' | 'Ready' | 'Inactive' | 'Done' | 'Overdue' | 'Approved' | 'Rejected';
   amount: string;
   raw?: Record<string, unknown>;
   /** When set, this row is shown read-only (no edit/delete) with this label instead — for records that actually live on and must be edited from a different page. */
@@ -112,6 +112,12 @@ export interface FeaturePageRow {
     label: string;
     icon: string;
   };
+  /** When set alongside toggleAction, shows a second quick-action button (e.g. Approve/Reject) that emits (secondaryToggleRecord). */
+  secondaryToggleAction?: {
+    label: string;
+    icon: string;
+    tone?: 'danger';
+  };
   /** When set, shows a quick-action button that navigates to another page's feature form, pre-filled via query params — e.g. "log this compliance item's cost as an Expense". */
   linkAction?: {
     label: string;
@@ -119,6 +125,8 @@ export interface FeaturePageRow {
     route: string;
     queryParams?: Record<string, string>;
   };
+  /** When true, hides just the edit (pencil) button while still allowing delete/toggle actions — for records that are only ever created or reviewed, never edited in place. */
+  hideEditButton?: boolean;
 }
 
 export type FeatureFieldType = 'checkbox' | 'date' | 'month' | 'number' | 'select' | 'textarea' | 'text';

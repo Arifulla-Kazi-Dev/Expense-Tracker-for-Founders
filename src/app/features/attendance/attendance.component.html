@@ -161,6 +161,7 @@
       <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
         <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-emerald-500"></span>Present</span>
         <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-rose-500"></span>Absent</span>
+        <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-amber-500"></span>Leave</span>
         <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-sky-500"></span>Holiday</span>
         <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-slate-400"></span>Weekend</span>
       </div>
@@ -199,10 +200,30 @@
         <p class="metric-number mt-2 text-2xl font-semibold">{{ monthStats.absent }}</p>
       </div>
       <div class="ui-card rounded-lg p-4">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">On leave this month</p>
+        <p class="metric-number mt-2 text-2xl font-semibold">{{ monthStats.leave }}</p>
+      </div>
+      <div class="ui-card rounded-lg p-4">
         <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Attendance rate</p>
         <p class="metric-number mt-2 text-2xl font-semibold">{{ monthStats.percentage }}%</p>
       </div>
     </div>
+  </section>
+
+  <section class="mt-4">
+    <app-feature-page
+      [feature]="leaveFeature"
+      [rows]="leaveRows"
+      [isBusy]="isBusy"
+      [canEdit]="true"
+      [errorMessage]="errorMessage"
+      [toastMessage]="toastMessage"
+      (saveRecord)="saveLeaveRequest($event)"
+      (deleteRecord)="withdrawLeaveRequest($event)"
+      (toggleRecord)="approveLeaveRequest($event)"
+      (secondaryToggleRecord)="rejectLeaveRequest($event)"
+      (secondaryAction)="acknowledgeRealtime()"
+    />
   </section>
 
   @if (canManage()) {

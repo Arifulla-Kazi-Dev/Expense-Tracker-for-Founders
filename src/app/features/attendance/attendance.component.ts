@@ -8,11 +8,13 @@ import { AttendanceRecord, AttendanceToken, Holiday, HolidayInput } from '../../
 import { CompanyMember } from '../../core/models/company.model';
 import { HolidayRegion, INDIA_PUBLIC_HOLIDAYS, REGION_LABELS, holidaysForYear } from '../../core/data/india-holidays.data';
 import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
+import { LEAVE_TYPES, LeaveRequest, LeaveRequestInput, LeaveType } from '../../core/models/leave-request.model';
 import { UserRole, roleDisplayName } from '../../core/models/role.model';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { AttendanceTokenService } from '../../core/services/attendance-token.service';
 import { AuthService } from '../../core/services/auth.service';
 import { HolidayService } from '../../core/services/holiday.service';
+import { LeaveRequestService } from '../../core/services/leave-request.service';
 import { MemberService } from '../../core/services/member.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { parseIsoDate, toIsoDate } from '../../core/utils/date-cycles';
@@ -23,6 +25,7 @@ import { FeaturePageComponent, FeatureSaveEvent } from '../../shared/components/
 interface MonthStats {
   present: number;
   absent: number;
+  leave: number;
   percentage: number;
 }
 
@@ -38,10 +41,12 @@ export class AttendanceComponent implements OnDestroy {
   private readonly attendanceService = inject(AttendanceService);
   private readonly attendanceTokenService = inject(AttendanceTokenService);
   private readonly holidayService = inject(HolidayService);
+  private readonly leaveRequestService = inject(LeaveRequestService);
   private readonly memberService = inject(MemberService);
 
   private readonly records = toSignal(this.attendanceService.list(), { initialValue: [] as AttendanceRecord[] });
   private readonly holidays = toSignal(this.holidayService.list(), { initialValue: [] as Holiday[] });
+  private readonly leaveRequests = toSignal(this.leaveRequestService.list(), { initialValue: [] as LeaveRequest[] });
   private readonly members = toSignal(this.memberService.members$, { initialValue: [] as CompanyMember[] });
   readonly todayToken = toSignal(this.attendanceTokenService.todayToken$, { initialValue: null as AttendanceToken | null });
   readonly profile = toSignal(this.authService.profile$, { initialValue: null });
@@ -108,6 +113,13 @@ export class AttendanceComponent implements OnDestroy {
     return this.members().find((member) => member.uid === uid)?.role ?? null;
   }
 
+  /** The approved leave request (if any) covering this member on this date. */
+  private approvedLeaveFor(uid: string, date: string): LeaveRequest | undefined {
+    return this.leaveRequests().find(
+      (request) => request.uid === uid && request.status === 'Approved' && date >= request.startDate && date <= request.endDate,
+    );
+  }
+
   /** The date attendance tracking should start from — the founder-set joining date if there is one, else falls back to when the account was actually created. */
   private joiningDateForUid(uid: string): string | null {
     const member = this.members().find((item) => item.uid === uid);
@@ -144,7 +156,10 @@ export class AttendanceComponent implements OnDestroy {
   }
 
   get isTodayOff(): boolean {
-    return isWeekend(this.today) || this.holidays().some((holiday) => holiday.date === this.today);
+    const uid = this.currentUid;
+    return isWeekend(this.today)
+      || this.holidays().some((holiday) => holiday.date === this.today)
+      || Boolean(uid && this.approvedLeaveFor(uid, this.today));
   }
 
   get hasCheckedInToday(): boolean {
@@ -201,12 +216,13 @@ export class AttendanceComponent implements OnDestroy {
   }
 
   get monthStats(): MonthStats {
-    const relevant = this.calendarMarkers.filter((marker) => marker.label === 'Present' || marker.label === 'Absent');
-    const present = relevant.filter((marker) => marker.label === 'Present').length;
-    const absent = relevant.filter((marker) => marker.label === 'Absent').length;
+    const markers = this.calendarMarkers;
+    const present = markers.filter((marker) => marker.label === 'Present').length;
+    const absent = markers.filter((marker) => marker.label === 'Absent').length;
+    const leave = markers.filter((marker) => marker.label?.startsWith('Leave')).length;
     const total = present + absent;
 
-    return { present, absent, percentage: total > 0 ? Math.round((present / total) * 100) : 0 };
+    return { present, absent, leave, percentage: total > 0 ? Math.round((present / total) * 100) : 0 };
   }
 
   onMonthChange(change: { year: number; month: number }): void {
@@ -253,6 +269,11 @@ export class AttendanceComponent implements OnDestroy {
 
     if (isWeekend(date) || this.holidays().some((holiday) => holiday.date === date)) {
       this.showToast('That day is already a day off.');
+      return;
+    }
+
+    if (this.approvedLeaveFor(uid, date)) {
+      this.showToast('That day is on approved leave.');
       return;
     }
 
@@ -418,6 +439,112 @@ export class AttendanceComponent implements OnDestroy {
     }
   }
 
+  get leaveFeature(): FeaturePageConfig {
+    const manage = this.canManage();
+
+    return {
+      eyebrow: 'Attendance',
+      title: manage ? 'Leave requests' : 'My leave requests',
+      description: manage
+        ? 'Review and approve time-off requests from your team.'
+        : "Request time off — it won't count as absent once approved.",
+      icon: 'calendar-clock',
+      primaryAction: 'Request Leave',
+      secondaryAction: 'Realtime',
+      formTitle: 'Request leave',
+      emptyTitle: manage ? 'No leave requests yet' : "You haven't requested leave yet",
+      emptyDescription: manage
+        ? 'Requests from your team will show up here for review.'
+        : 'Request a day off and your founder or HR will review it here.',
+      collapsible: true,
+      fields: [
+        { name: 'leaveType', label: 'Type', type: 'select', display: 'select', options: LEAVE_TYPES, required: true },
+        { name: 'startDate', label: 'Start date', type: 'date', required: true },
+        { name: 'endDate', label: 'End date', type: 'date', required: true, hint: 'Same as start date for a single day off.' },
+        { name: 'reason', label: 'Reason', type: 'textarea', placeholder: 'Optional context for your manager' },
+      ],
+      stats: [],
+      rows: [],
+    };
+  }
+
+  get leaveRows(): FeaturePageRow[] {
+    const manage = this.canManage();
+    const relevant = manage ? this.leaveRequests() : this.leaveRequests().filter((request) => request.uid === this.currentUid);
+
+    return relevant.map((request) => {
+      const range = request.startDate === request.endDate
+        ? this.formatDate(request.startDate)
+        : `${this.formatDate(request.startDate)} – ${this.formatDate(request.endDate)}`;
+
+      const row: FeaturePageRow = {
+        id: request.id,
+        title: manage ? `${request.memberName} — ${request.leaveType}` : request.leaveType,
+        meta: request.reason ? `${range} · ${request.reason}` : range,
+        status: request.status,
+        amount: '',
+        raw: request as unknown as Record<string, unknown>,
+      };
+
+      if (request.status !== 'Pending') {
+        row.lockedLabel = request.reviewedByName ? `${request.status} by ${request.reviewedByName}` : request.status;
+        return row;
+      }
+
+      row.hideEditButton = true;
+
+      if (manage) {
+        row.toggleAction = { label: 'Approve', icon: 'check-circle-2' };
+        row.secondaryToggleAction = { label: 'Reject', icon: 'x', tone: 'danger' };
+      }
+
+      return row;
+    });
+  }
+
+  async saveLeaveRequest(event: FeatureSaveEvent): Promise<void> {
+    const input: LeaveRequestInput = {
+      leaveType: textValue(event.value, 'leaveType') as LeaveType,
+      startDate: textValue(event.value, 'startDate'),
+      endDate: textValue(event.value, 'endDate'),
+      reason: textValue(event.value, 'reason'),
+    };
+
+    if (input.endDate < input.startDate) {
+      this.errorMessage = 'End date cannot be before the start date.';
+      return;
+    }
+
+    const memberName = this.profile()?.name ?? 'Member';
+    await this.runMutation(() => this.leaveRequestService.create(input, memberName), 'Leave request submitted');
+  }
+
+  async withdrawLeaveRequest(id: string): Promise<void> {
+    await this.runMutation(() => this.leaveRequestService.withdraw(id), 'Leave request withdrawn');
+  }
+
+  async approveLeaveRequest(id: string): Promise<void> {
+    await this.reviewLeaveRequest(id, 'Approved');
+  }
+
+  async rejectLeaveRequest(id: string): Promise<void> {
+    await this.reviewLeaveRequest(id, 'Rejected');
+  }
+
+  private async reviewLeaveRequest(id: string, status: 'Approved' | 'Rejected'): Promise<void> {
+    const uid = this.currentUid;
+
+    if (!uid) {
+      return;
+    }
+
+    const reviewerName = this.profile()?.name ?? 'Manager';
+    await this.runMutation(
+      () => this.leaveRequestService.review(id, status, uid, reviewerName),
+      `Leave request ${status.toLowerCase()}`,
+    );
+  }
+
   formatDate(value: string): string {
     const date = parseIsoDate(value);
     return date
@@ -448,6 +575,13 @@ export class AttendanceComponent implements OnDestroy {
 
       if (holiday) {
         markers.push({ date, tone: 'sky', fill: true, label: holiday.name });
+        continue;
+      }
+
+      const leave = this.approvedLeaveFor(uid, date);
+
+      if (leave) {
+        markers.push({ date, tone: 'amber', fill: true, label: `Leave (${leave.leaveType})` });
         continue;
       }
 

@@ -439,6 +439,29 @@ service cloud.firestore {
           );
         allow delete: if canManageAttendance(companyId);
       }
+
+      match /leaveRequests/{docId} {
+        allow read: if canViewAttendance(companyId);
+        // Anyone with attendance access can request their own leave — always
+        // starting as 'Pending', never self-approved.
+        allow create: if canViewAttendance(companyId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status == 'Pending'
+          && request.resource.data.startDate is string
+          && request.resource.data.endDate is string
+          && request.resource.data.startDate <= request.resource.data.endDate;
+        // Only a manager can review a request, and only the review fields —
+        // the requester, dates and type are locked once submitted.
+        allow update: if canManageAttendance(companyId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.startDate == resource.data.startDate
+          && request.resource.data.endDate == resource.data.endDate
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedByName', 'updatedAt']);
+        // A manager can remove any request; the requester can withdraw only
+        // their own while it's still pending.
+        allow delete: if canManageAttendance(companyId)
+          || (isCompanyMember(companyId) && resource.data.uid == request.auth.uid && resource.data.status == 'Pending');
+      }
     }
 
     match /inviteLookups/{token} {
