@@ -192,18 +192,24 @@ html.dark .skeleton::after {
 
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
+  /* transform: none (not translateY(0)) — with animation-fill-mode: both, the
+     end-of-animation transform sticks around forever. Any non-none transform,
+     even an identity one, turns the element into a containing block for
+     position: fixed descendants (like modals), which then get positioned
+     relative to this box instead of the viewport — pushing them off-screen on
+     any page taller than one viewport. */
+  to { opacity: 1; transform: none; }
 }
 
 @keyframes slide-in-right {
   from { opacity: 0; transform: translateX(18px); }
-  to { opacity: 1; transform: translateX(0); }
+  to { opacity: 1; transform: none; }
 }
 
 @keyframes pop-in {
   0% { opacity: 0; transform: scale(0.92); }
   60% { opacity: 1; transform: scale(1.02); }
-  100% { opacity: 1; transform: scale(1); }
+  100% { opacity: 1; transform: none; }
 }
 
 @keyframes float-soft {

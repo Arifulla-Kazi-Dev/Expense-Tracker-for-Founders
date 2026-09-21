@@ -7,7 +7,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { AttendanceRecord, AttendanceToken, Holiday, HolidayInput } from '../../core/models/attendance.model';
 import { CompanyMember } from '../../core/models/company.model';
 import { HolidayRegion, INDIA_PUBLIC_HOLIDAYS, REGION_LABELS, holidaysForYear } from '../../core/data/india-holidays.data';
-import { FeaturePageConfig, FeaturePageRow } from '../../core/models/dashboard.models';
+import { FeatureFormOption, FeaturePageConfig, FeaturePageRow, Tone } from '../../core/models/dashboard.models';
 import { LEAVE_TYPES, LeaveRequest, LeaveRequestInput, LeaveType } from '../../core/models/leave-request.model';
 import { UserRole, roleDisplayName } from '../../core/models/role.model';
 import { AttendanceService } from '../../core/services/attendance.service';
@@ -458,7 +458,7 @@ export class AttendanceComponent implements OnDestroy {
         : 'Request a day off and your founder or HR will review it here.',
       collapsible: true,
       fields: [
-        { name: 'leaveType', label: 'Type', type: 'select', display: 'select', options: LEAVE_TYPES, required: true },
+        { name: 'leaveType', label: 'Type', type: 'select', options: LEAVE_TYPE_OPTIONS, required: true },
         { name: 'startDate', label: 'Start date', type: 'date', required: true },
         { name: 'endDate', label: 'End date', type: 'date', required: true, hint: 'Same as start date for a single day off.' },
         { name: 'reason', label: 'Reason', type: 'textarea', placeholder: 'Optional context for your manager' },
@@ -625,6 +625,22 @@ export class AttendanceComponent implements OnDestroy {
     }, 2400);
   }
 }
+
+const LEAVE_TYPE_META: Record<LeaveType, { icon: string; tone: Tone; detail: string }> = {
+  Sick: { icon: 'activity', tone: 'rose', detail: 'Unwell or recovering' },
+  Casual: { icon: 'sun', tone: 'sky', detail: 'Short personal time off' },
+  Paid: { icon: 'badge-indian-rupee', tone: 'emerald', detail: 'Approved paid time off' },
+  Unpaid: { icon: 'circle-minus', tone: 'slate', detail: 'Time off without pay' },
+  Other: { icon: 'layers-3', tone: 'slate', detail: 'Anything else' },
+};
+
+const LEAVE_TYPE_OPTIONS: FeatureFormOption[] = LEAVE_TYPES.map((type) => ({
+  value: type,
+  label: type,
+  detail: LEAVE_TYPE_META[type].detail,
+  icon: LEAVE_TYPE_META[type].icon,
+  tone: LEAVE_TYPE_META[type].tone,
+}));
 
 function canAccessAttendance(role: UserRole): boolean {
   return role === 'founder' || role === 'cofounder' || role === 'hr-manager' || role === 'team-member';
