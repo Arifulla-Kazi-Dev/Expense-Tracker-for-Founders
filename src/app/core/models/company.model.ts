@@ -28,6 +28,8 @@ export interface CompanyMember {
   role: UserRole;
   /** Job title shown instead of the generic role label — only meaningful when role is 'team-member'. */
   jobTitle?: string;
+  /** ISO date (YYYY-MM-DD) the member's employment actually starts — set by the founder at invite time, independent of when they accept the invite. Days before this never count as attendance. */
+  joiningDate?: string;
   status: CompanyMemberStatus;
   invitedBy: string;
   joinedAt: FirestoreDate;
@@ -48,6 +50,7 @@ export interface CompanyMembership {
   photoURL: string | null;
   role: UserRole;
   jobTitle?: string;
+  joiningDate?: string;
   status: CompanyMemberStatus;
   invitedBy: string;
   joinedAt: FirestoreDate;
@@ -65,6 +68,7 @@ export interface CompanyInvite {
   token: string;
   role: UserRole;
   jobTitle?: string;
+  joiningDate?: string;
   invitedEmail?: string;
   invitedPhone?: string;
   invitedByUid: string;
@@ -79,6 +83,7 @@ export interface CompanyInvite {
 export interface CreateInviteInput {
   role: UserRole;
   jobTitle?: string;
+  joiningDate?: string;
   invitedEmail?: string;
   invitedPhone?: string;
   expiryDays: number;

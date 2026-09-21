@@ -25,6 +25,7 @@ import { MemberService } from '../../core/services/member.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { tonePanelClass } from '../../core/utils/ui-classnames';
+import { parseIsoDate, toIsoDate } from '../../core/utils/date-cycles';
 
 @Component({
   selector: 'app-team',
@@ -56,6 +57,7 @@ export class TeamComponent implements OnDestroy {
   readonly inviteForm = this.formBuilder.nonNullable.group({
     role: ['finance-manager' as UserRole, [Validators.required]],
     jobTitle: [''],
+    joiningDate: [toIsoDate(new Date()), [Validators.required]],
     expiryDays: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
   });
 
@@ -219,6 +221,7 @@ export class TeamComponent implements OnDestroy {
       this.inviteForm.patchValue({
         role: 'finance-manager',
         jobTitle: '',
+        joiningDate: toIsoDate(new Date()),
         expiryDays: 7,
       });
       this.inviteForm.markAsPristine();
@@ -520,6 +523,13 @@ export class TeamComponent implements OnDestroy {
     }
 
     return this.permissionValue(member, permission) ? 'Custom on' : 'Custom off';
+  }
+
+  joiningDateLabel(value: string | undefined): string {
+    const date = value ? parseIsoDate(value) : null;
+    return date
+      ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
+      : 'Not set';
   }
 
   dateLabel(value: unknown): string {

@@ -108,6 +108,26 @@ export class AttendanceComponent implements OnDestroy {
     return this.members().find((member) => member.uid === uid)?.role ?? null;
   }
 
+  /** The date attendance tracking should start from — the founder-set joining date if there is one, else falls back to when the account was actually created. */
+  private joiningDateForUid(uid: string): string | null {
+    const member = this.members().find((item) => item.uid === uid);
+
+    if (member?.joiningDate) {
+      return member.joiningDate;
+    }
+
+    const joinedAt = member?.joinedAt as { toDate?: () => Date } | Date | string | null | undefined;
+    const date = (joinedAt && typeof joinedAt === 'object' && 'toDate' in joinedAt && joinedAt.toDate)
+      ? joinedAt.toDate()
+      : joinedAt instanceof Date
+        ? joinedAt
+        : typeof joinedAt === 'string'
+          ? new Date(joinedAt)
+          : null;
+
+    return date && !Number.isNaN(date.getTime()) ? toIsoDate(date) : null;
+  }
+
   /** Role label shown in the picker — a team member's job title stands in for the generic "Team Member" label when set. */
   roleOrJobTitleFor(uid: string): string {
     const member = this.members().find((item) => item.uid === uid);
@@ -199,6 +219,17 @@ export class AttendanceComponent implements OnDestroy {
     return this.canManage() && !this.isAlwaysPresentUid(this.viewedUid);
   }
 
+  get viewedJoiningDateLabel(): string {
+    const uid = this.viewedUid;
+
+    if (!uid || this.isAlwaysPresentUid(uid)) {
+      return '';
+    }
+
+    const joiningDate = this.joiningDateForUid(uid);
+    return joiningDate ? this.formatDate(joiningDate) : '';
+  }
+
   isTogglingAttendance = false;
 
   async onCalendarDayClick(date: string): Promise<void> {
@@ -210,6 +241,13 @@ export class AttendanceComponent implements OnDestroy {
 
     if (date > this.today) {
       this.showToast("Can't mark attendance for a future date.");
+      return;
+    }
+
+    const joiningDate = this.joiningDateForUid(uid);
+
+    if (joiningDate && date < joiningDate) {
+      this.showToast("That's before their joining date.");
       return;
     }
 
@@ -389,6 +427,7 @@ export class AttendanceComponent implements OnDestroy {
 
   private markersForMonth(year: number, month: number, uid: string): CalendarMarker[] {
     const today = this.today;
+    const joiningDate = this.joiningDateForUid(uid);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const markers: CalendarMarker[] = [];
     const alwaysPresent = this.isAlwaysPresentUid(uid);
@@ -396,7 +435,7 @@ export class AttendanceComponent implements OnDestroy {
     for (let day = 1; day <= daysInMonth; day += 1) {
       const date = toIsoDate(new Date(year, month, day));
 
-      if (date > today) {
+      if (date > today || (joiningDate && date < joiningDate)) {
         continue;
       }
 

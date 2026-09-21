@@ -191,6 +191,8 @@ service cloud.firestore {
           'photoURL',
           'invitedBy',
           'joinedAt',
+          'jobTitle',
+          'joiningDate',
           'createdAt',
           'updatedAt',
           'inviteId'
@@ -293,7 +295,7 @@ service cloud.firestore {
             && coreMemberFieldsUnchanged()
             && roleChangeAllowed(companyId)
             && permissionOverrideChangeAllowed(companyId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'permissionOverrides', 'updatedAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'permissionOverrides', 'jobTitle', 'joiningDate', 'updatedAt'])
           )
           || selfMemberProfileSync(companyId, memberId);
 

@@ -177,6 +177,13 @@
         </p>
       }
 
+      @if (viewedJoiningDateLabel) {
+        <p class="mt-1 inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <svg lucideIcon="calendar-clock" class="size-3.5"></svg>
+          Tracking since {{ viewedJoiningDateLabel }} — days before that aren't counted.
+        </p>
+      }
+
       <div class="mt-4 max-w-sm" [class.opacity-60]="isTogglingAttendance">
         <app-calendar-month [markers]="calendarMarkers" (monthChange)="onMonthChange($event)" (dayClick)="onCalendarDayClick($event)" />
       </div>

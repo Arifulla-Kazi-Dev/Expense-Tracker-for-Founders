@@ -179,6 +179,14 @@
           }
 
           <label class="grid gap-2 text-sm font-medium">
+            Joining date
+            <span class="-mt-1 text-xs font-normal leading-4 text-slate-500 dark:text-slate-400">
+              When their employment actually starts — their attendance calendar only tracks days from this date on, so it's not full of absences before they even joined.
+            </span>
+            <input formControlName="joiningDate" type="date" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900">
+          </label>
+
+          <label class="grid gap-2 text-sm font-medium">
             Expiry days
             <input formControlName="expiryDays" type="number" min="1" max="30" class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-slate-800 dark:bg-slate-900">
           </label>
@@ -208,6 +216,9 @@
                   <div class="min-w-0">
                     <p class="font-semibold">{{ roleLabel(invite.role) }}{{ invite.jobTitle ? ' · ' + invite.jobTitle : '' }}</p>
                     <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{{ invite.invitedEmail || invite.invitedPhone || 'Open invite link' }}</p>
+                    @if (invite.joiningDate) {
+                      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Joins {{ joiningDateLabel(invite.joiningDate) }}</p>
+                    }
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Expires {{ dateLabel(invite.expiresAt) }}</p>
                   </div>
                   <span class="rounded-full px-2 py-1 text-xs font-semibold ring-1" [ngClass]="statusClass(invite.status)">{{ invite.status }}</span>
@@ -272,7 +283,7 @@
                   <span class="min-w-0">
                     <span class="block truncate font-semibold">{{ member.name }}</span>
                     <span class="mt-1 block truncate text-xs text-slate-500 dark:text-slate-400">{{ member.email || 'No email' }}</span>
-                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Joined {{ dateLabel(member.joinedAt) }}</span>
+                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Joined {{ member.joiningDate ? joiningDateLabel(member.joiningDate) : dateLabel(member.joinedAt) }}</span>
                   </span>
                 </span>
 
